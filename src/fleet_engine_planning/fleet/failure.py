@@ -28,8 +28,8 @@ class WeibullFailureModel:
     beta_bad_health: float = 0.0          # applied to (1 - health)
 
     def _linpred(self, e: Engine) -> float:
-        age_n = max(0.0, e.age) / self.age_ref_months
-        dist_n = max(0.0, e.distance) / self.distance_ref_km
+        age_n = max(0.0, e.age_months) / self.age_ref_months
+        dist_n = max(0.0, e.distance_km) / self.distance_ref_km
         bad_health = 1.0 - max(0.0, min(1.0, e.health))
         return self.beta_age * age_n + self.beta_distance * dist_n + self.beta_bad_health * bad_health
 
