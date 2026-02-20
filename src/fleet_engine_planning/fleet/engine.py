@@ -8,8 +8,8 @@ from typing import List
 class Engine:
     """State of one engine at decision time."""
     engine_id: str
-    age: float          # month
-    distance: float     # km
+    age_months: float          # month
+    distance_km: float     # km
     health: float # [0..1]
 
 
