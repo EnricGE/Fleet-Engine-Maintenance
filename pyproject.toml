@@ -1,7 +1,7 @@
 [project]
-name = "MaintenanceUncertainty"
+name = "EngineMaintenanceUncertainty"
 version = "0.1.0"
-description = "Choosing a Maintenance Policy Under Failure Uncertainty"
+description = "Fleet Engine Maintenance under Uncertainty"
 requires-python = ">=3.13,<3.14"
 
 dependencies = [
