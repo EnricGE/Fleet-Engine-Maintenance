@@ -1,0 +1,22 @@
+{
+  "fleet_file": "../fleets/fleet_001.json",
+  
+  "horizon_months": 12,
+  "shop_capacity": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+
+  "costs": {
+    "base_maint_cost": 12000.0,
+    "failure_penalty": 250000.0,
+    "gamma_health_cost": 1.0
+  },
+
+  "failure_model": {
+    "shape_k": 2.2,
+    "scale_lambda_months": 60.0,
+    "beta_age": 0.6,
+    "beta_distance": 0.4,
+    "beta_bad_health": 1.2,
+    "age_ref_months": 60.0,
+    "distance_ref_km": 600000.0
+  }
+}

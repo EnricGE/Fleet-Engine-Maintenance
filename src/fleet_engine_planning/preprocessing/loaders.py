@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 
 from fleet_engine_planning.fleet.engine import Engine, Fleet
+from fleet_engine_planning.preprocessing.schema import Scenario
 
 
 def load_json(path: str | Path) -> dict:
@@ -34,3 +35,39 @@ def load_fleet_from_json(path: str | Path) -> Fleet:
         engines.append(engine)
 
     return Fleet(engines=engines)
+
+
+def load_scenario(path: str | Path) -> Scenario:
+    """
+    Load scheduling scenario.
+    Scenario JSON must contain:
+        - fleet_file
+        - horizon_months
+        - shop_capacity
+        - costs
+        - failure_model
+    """
+
+    path = Path(path)
+    data = load_json(path)
+
+    # Resolve fleet file relative to scenario file
+    fleet_path = Path(data["fleet_file"])
+    if not fleet_path.is_absolute():
+        fleet_path = path.parent / fleet_path
+
+    fleet = load_fleet_from_json(fleet_path)
+
+    horizon = int(data["horizon_months"])
+    capacity = [int(x) for x in data["shop_capacity"]]
+
+    if len(capacity) != horizon:
+        raise ValueError("shop_capacity length must equal horizon_months")
+
+    return Scenario(
+        horizon_months=horizon,
+        shop_capacity=capacity,
+        costs=data["costs"],
+        failure_model=data["failure_model"],
+        fleet=fleet,
+    )
