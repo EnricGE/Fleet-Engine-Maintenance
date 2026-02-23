@@ -4,19 +4,20 @@
   "horizon_months": 12,
   "shop_capacity": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
 
+  "spares": 1,
+  "h_min": 0.25,
+
   "costs": {
     "base_maint_cost": 12000.0,
-    "failure_penalty": 250000.0,
+    "rental_cost": 45000.0,
+    "downtime_cost": 200000.0,
     "gamma_health_cost": 1.0
   },
 
-  "failure_model": {
-    "shape_k": 2.2,
-    "scale_lambda_months": 60.0,
-    "beta_age": 0.6,
-    "beta_distance": 0.4,
-    "beta_bad_health": 1.2,
-    "age_ref_months": 60.0,
-    "distance_ref_km": 600000.0
+  "deterioration_model": {
+    "km_per_month": 25000,
+    "mu_base": 0.010,
+    "mu_per_1000km": 0.00025,
+    "sigma": 0.005
   }
 }

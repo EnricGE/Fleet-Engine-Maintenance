@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List
 
 from fleet_engine_planning.fleet.engine import Engine, Fleet
-from fleet_engine_planning.preprocessing.schema import Scenario
+from fleet_engine_planning.preprocessing.schema import Scenario, CostParams, DeteriorationParams
 
 
 def load_json(path: str | Path) -> dict:
@@ -44,10 +44,11 @@ def load_scenario(path: str | Path) -> Scenario:
         - fleet_file
         - horizon_months
         - shop_capacity
+        - spares
+        - h_min
         - costs
-        - failure_model
+        - deterioration_model
     """
-
     path = Path(path)
     data = load_json(path)
 
@@ -60,14 +61,34 @@ def load_scenario(path: str | Path) -> Scenario:
 
     horizon = int(data["horizon_months"])
     capacity = [int(x) for x in data["shop_capacity"]]
-
     if len(capacity) != horizon:
         raise ValueError("shop_capacity length must equal horizon_months")
+
+    spares = int(data["spares"])
+    h_min = float(data["h_min"])
+
+    c = data["costs"]
+    costs = CostParams(
+        base_maint_cost=float(c["base_maint_cost"]),
+        rental_cost=float(c["rental_cost"]),
+        downtime_cost=float(c["downtime_cost"]),
+        gamma_health_cost=float(c.get("gamma_health_cost", 1.0)),
+    )
+
+    d = data["deterioration_model"]
+    deterioration = DeteriorationParams(
+        km_per_month=float(d["km_per_month"]),
+        mu_base=float(d["mu_base"]),
+        mu_per_1000km=float(d["mu_per_1000km"]),
+        sigma=float(d["sigma"]),
+    )
 
     return Scenario(
         horizon_months=horizon,
         shop_capacity=capacity,
-        costs=data["costs"],
-        failure_model=data["failure_model"],
+        spares=spares,
+        h_min=h_min,
+        costs=costs,
+        deterioration=deterioration,
         fleet=fleet,
     )
