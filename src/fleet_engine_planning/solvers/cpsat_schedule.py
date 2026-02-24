@@ -21,6 +21,7 @@ def solve_cpsat_schedule_with_rentals(
     fleet: Fleet,
     horizon_months: int,
     shop_capacity: list[int],
+    shop_duration_months: int,
     n_required: int,
     n_scenarios: int,
     costs: CostParams,
@@ -60,8 +61,18 @@ def solve_cpsat_schedule_with_rentals(
         model.Add(sum(y[(i, m)] for m in range(0, T + 1)) == 1)
 
     # capacity constraints (ignore m=0)
-    for m in range(1, T + 1):
-        model.Add(sum(y[(i, m)] for i in engine_ids) <= int(shop_capacity[m - 1]))
+    D = int(shop_duration_months)
+
+    for t in range(1, T + 1):
+        starts_that_cover_t = []
+        for m in range(1, T + 1):
+            if m <= t <= m + D - 1:
+                starts_that_cover_t.append(m)
+
+        model.Add(
+            sum(y[(i, m)] for i in engine_ids for m in starts_that_cover_t)
+            <= int(shop_capacity[t - 1])
+        )
 
     # rentals and downtime per (t,s)
     r: Dict[Tuple[int, int], cp_model.IntVar] = {}
@@ -123,4 +134,5 @@ def solve_cpsat_schedule_with_rentals(
     downtime = {(t, s): int(solver.Value(d[(t, s)])) for t in range(1, T + 1) for s in range(S)}
 
     objective = solver.ObjectiveValue() / SCALE
+    
     return ScheduleResult(schedule=schedule, objective=objective, rentals=rentals, downtime=downtime)

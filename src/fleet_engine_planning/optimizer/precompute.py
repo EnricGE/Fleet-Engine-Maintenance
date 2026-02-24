@@ -17,6 +17,7 @@ def build_operability_tensor(
     horizon_months: int,
     n_scenarios: int,
     h_min: float,
+    shop_duration_months: int,
 ) -> Dict[Tuple[str, int, int, int], int]:
     """
     Returns a[(engine_id, month, scenario, shop_month)] in {0,1}
@@ -40,6 +41,7 @@ def build_operability_tensor(
                         scenario=s,
                         shop_month=m,
                         h_min=h_min,
+                        shop_duration=shop_duration_months,
                     )
     return a
 

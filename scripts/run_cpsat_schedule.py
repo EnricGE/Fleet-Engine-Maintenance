@@ -10,7 +10,7 @@ def main() -> None:
     scenario = load_scenario("data/v1/scenarios/baseline.json")
 
     T = scenario.horizon_months
-    S = 30  # start small; increase later
+    S = 30
 
     n_required = max(0, len(scenario.fleet.engines) - scenario.spares)
     print("Engines:", len(scenario.fleet.engines), "Spares:", scenario.spares, "Required:", n_required)
@@ -29,6 +29,7 @@ def main() -> None:
         horizon_months=T,
         n_scenarios=S,
         h_min=scenario.h_min,
+        shop_duration_months=scenario.shop_duration_months,
     )
 
     c_shop = build_expected_shop_costs(
@@ -43,6 +44,7 @@ def main() -> None:
         fleet=scenario.fleet,
         horizon_months=T,
         shop_capacity=scenario.shop_capacity,
+        shop_duration_months=scenario.shop_duration_months,
         n_required=n_required,
         n_scenarios=S,
         costs=scenario.costs,

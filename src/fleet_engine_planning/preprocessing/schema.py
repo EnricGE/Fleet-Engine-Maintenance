@@ -9,6 +9,7 @@ from fleet_engine_planning.fleet.engine import Fleet
 class Scenario:
     horizon_months: int
     shop_capacity: list[int]
+    shop_duration_months: int
     spares: int
     h_min: float
     costs: CostParams

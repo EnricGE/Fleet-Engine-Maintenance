@@ -44,6 +44,7 @@ def load_scenario(path: str | Path) -> Scenario:
         - fleet_file
         - horizon_months
         - shop_capacity
+        - shop_duration_months
         - spares
         - h_min
         - costs
@@ -63,6 +64,7 @@ def load_scenario(path: str | Path) -> Scenario:
     capacity = [int(x) for x in data["shop_capacity"]]
     if len(capacity) != horizon:
         raise ValueError("shop_capacity length must equal horizon_months")
+    shop_duration = int(data.get("shop_duration_months",1))
 
     spares = int(data["spares"])
     h_min = float(data["h_min"])
@@ -86,6 +88,7 @@ def load_scenario(path: str | Path) -> Scenario:
     return Scenario(
         horizon_months=horizon,
         shop_capacity=capacity,
+        shop_duration_months=shop_duration,
         spares=spares,
         h_min=h_min,
         costs=costs,

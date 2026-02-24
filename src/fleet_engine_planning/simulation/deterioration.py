@@ -82,6 +82,7 @@ def operable_under_single_shop(
     scenario: int,
     shop_month: int,
     h_min: float,
+    shop_duration: int,
 ) -> int:
     """
     Returns 1 if engine is operable in 'month' (1..T) under scenario,
@@ -89,21 +90,24 @@ def operable_under_single_shop(
 
     Convention:
       - If shop_month = m >= 1: engine is IN SHOP during month m -> not operable.
-      - Engine returns at start of month m+1 with health reset to 1.0.
-      - Operability check is at start of month.
-
-    If shop_month = 0: no shop.
+      - shop_month = start month of shop, 0 means no shop. 
+      - Engine unavailable during months [shop_month, shop_month + shop_duration - 1].
+      - Returns at start of month (shop_month + shop_duration) with health reset to 1.0.
     """
     if shop_month == 0:
         h = health_at_start_of_month(h0, dh, engine_id, month, scenario)
         return 1 if h >= h_min else 0
 
-    if month == shop_month:
-        return 0  # in shop
+    # In shop window -> not operable
+    if shop_month <= month <= shop_month + shop_duration - 1:
+        return 0
 
     if month < shop_month:
         h = health_at_start_of_month(h0, dh, engine_id, month, scenario)
         return 1 if h >= h_min else 0
+
+    # month > shop_month + shop_duration - 1: after return
+    return_month = shop_month + shop_duration  # reset at start of this month
 
     # month > shop_month: reset at start of month shop_month+1
     # health at start of month (shop_month+1) is 1.0
@@ -113,4 +117,5 @@ def operable_under_single_shop(
         h -= dh[(engine_id, t, scenario)]
         if h <= 0.0:
             return 0
+        
     return 1 if h >= h_min else 0
