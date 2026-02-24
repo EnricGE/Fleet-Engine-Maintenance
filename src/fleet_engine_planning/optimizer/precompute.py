@@ -54,8 +54,6 @@ def build_expected_shop_costs(
     """
     Expected cost of scheduling a shop visit for engine i in month m (1..T).
     Uses expected health at start of month m to compute maintenance cost.
-
-    You can refine later (cost depends on workscope, LLP, etc).
     """
     T = int(horizon_months)
     S = int(n_scenarios)
@@ -70,4 +68,5 @@ def build_expected_shop_costs(
                 total += maintenance_cost(costs.base_maint_cost, h_pre, costs.gamma_health_cost)
             c_shop[(e.engine_id, m)] = total / S
 
+    print(c_shop)
     return c_shop
