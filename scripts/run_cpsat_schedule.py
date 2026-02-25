@@ -45,6 +45,7 @@ def main() -> None:
         horizon_months=T,
         shop_capacity=scenario.shop_capacity,
         shop_duration_months=scenario.shop_duration_months,
+        max_rentals_per_month=scenario.max_rentals_per_month,
         n_required=n_required,
         n_scenarios=S,
         costs=scenario.costs,
@@ -66,7 +67,8 @@ def main() -> None:
     for t in range(1, T + 1):
         avg_r = sum(res.rentals[(t, s)] for s in range(S)) / S
         avg_d = sum(res.downtime[(t, s)] for s in range(S)) / S
-        print(f"month {t:02d}: rentals={avg_r:.2f}, downtime={avg_d:.2f}")
+        max_d = max(res.downtime[(t,s)] for s in range(S))
+        print(f"month {t:02d}: rentals={avg_r:.2f}, downtime={avg_d:.2f}, worst-case={max_d}")
 
     # objective reporting: note rentals/downtime were summed across scenarios in objective
     # (so objective scale is consistent, but not divided by S). We'll keep it as-is for now.

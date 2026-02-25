@@ -6,6 +6,7 @@
   "shop_duration_months": 2,
 
   "spares": 1,
+  "max_rentals_per_month": 2,
   "h_min": 0.25,
 
   "costs": {

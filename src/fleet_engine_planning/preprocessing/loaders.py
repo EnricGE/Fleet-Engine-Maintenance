@@ -46,6 +46,7 @@ def load_scenario(path: str | Path) -> Scenario:
         - shop_capacity
         - shop_duration_months
         - spares
+        - max_rentals_per_month
         - h_min
         - costs
         - deterioration_model
@@ -67,6 +68,7 @@ def load_scenario(path: str | Path) -> Scenario:
     shop_duration = int(data.get("shop_duration_months",1))
 
     spares = int(data["spares"])
+    max_rentals_per_month = int(data.get("max_rentals_per_month",10**4)) # Unlimited if not provided
     h_min = float(data["h_min"])
 
     c = data["costs"]
@@ -90,6 +92,7 @@ def load_scenario(path: str | Path) -> Scenario:
         shop_capacity=capacity,
         shop_duration_months=shop_duration,
         spares=spares,
+        max_rentals_per_month=max_rentals_per_month,
         h_min=h_min,
         costs=costs,
         deterioration=deterioration,

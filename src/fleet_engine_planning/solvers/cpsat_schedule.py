@@ -22,6 +22,7 @@ def solve_cpsat_schedule_with_rentals(
     horizon_months: int,
     shop_capacity: list[int],
     shop_duration_months: int,
+    max_rentals_per_month: int,
     n_required: int,
     n_scenarios: int,
     costs: CostParams,
@@ -77,9 +78,12 @@ def solve_cpsat_schedule_with_rentals(
     # rentals and downtime per (t,s)
     r: Dict[Tuple[int, int], cp_model.IntVar] = {}
     d: Dict[Tuple[int, int], cp_model.IntVar] = {}
+
+    max_rentals = int(max_rentals_per_month)
+
     for t in range(1, T + 1):
         for s in range(S):
-            r[(t, s)] = model.NewIntVar(0, len(engine_ids), f"r_{t}_{s}")
+            r[(t, s)] = model.NewIntVar(0, max_rentals, f"r_{t}_{s}")
             d[(t, s)] = model.NewIntVar(0, len(engine_ids), f"d_{t}_{s}")
 
             # operable engines count is a linear expression of y
@@ -91,11 +95,12 @@ def solve_cpsat_schedule_with_rentals(
                         oper_expr.append(y[(i, m)])  # coefficient 1
                     # if a==0, skip
 
+            # Coverage constraint
             model.Add(sum(oper_expr) + r[(t, s)] + d[(t, s)] >= int(n_required))
 
     # Objective: shop + expected rentals + expected downtime
     # Use integer scaling to keep CP-SAT happy with floats.
-    SCALE = 100  # cents-ish; increase if needed
+    SCALE = 100 
     obj_terms = []
 
     # shop costs

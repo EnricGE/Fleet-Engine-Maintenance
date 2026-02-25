@@ -11,6 +11,7 @@ class Scenario:
     shop_capacity: list[int]
     shop_duration_months: int
     spares: int
+    max_rentals_per_month: int
     h_min: float
     costs: CostParams
     deterioration: DeteriorationParams
