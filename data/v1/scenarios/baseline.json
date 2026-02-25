@@ -11,12 +11,12 @@
   "costs": {
     "base_maint_cost": 12000.0,
     "rental_cost": 45000.0,
-    "downtime_cost": 200000.0,
+    "downtime_cost": 2000000.0,
     "gamma_health_cost": 1.0
   },
 
   "deterioration_model": {
-    "km_per_month": 25000,
+    "km_per_month": 250000,
     "mu_base": 0.010,
     "mu_per_1000km": 0.00025,
     "sigma": 0.005

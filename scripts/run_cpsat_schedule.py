@@ -13,7 +13,7 @@ def main() -> None:
     S = 30
 
     n_required = max(0, len(scenario.fleet.engines) - scenario.spares)
-    print("Engines:", len(scenario.fleet.engines), "Spares:", scenario.spares, "Required:", n_required)
+    print("Engines:", len(scenario.fleet.engines), ", Spares:", scenario.spares, ", Required:", n_required)
 
     dh = sample_deterioration_deltas(
         fleet=scenario.fleet,

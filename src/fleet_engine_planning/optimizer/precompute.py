@@ -70,5 +70,4 @@ def build_expected_shop_costs(
                 total += maintenance_cost(costs.base_maint_cost, h_pre, costs.gamma_health_cost)
             c_shop[(e.engine_id, m)] = total / S
 
-    print(c_shop)
     return c_shop
