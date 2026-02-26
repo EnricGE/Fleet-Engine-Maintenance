@@ -22,7 +22,7 @@ def main() -> None:
     seed = 123
 
     n_required = max(0, len(scenario.fleet.engines) - scenario.spares)
-    print("Engines:", len(scenario.fleet.engines), "Spares:", scenario.spares, "Required:", n_required)
+    print("Engines:", len(scenario.fleet.engines), ", Spares:", scenario.spares, ", Required:", n_required)
     print("Horizon:", T, "Scenarios:", S)
     print()
 
@@ -41,6 +41,7 @@ def main() -> None:
         horizon_months=T,
         n_scenarios=S,
         h_min=scenario.h_min,
+        shop_duration_months=scenario.shop_duration_months,
     )
 
     c_shop = build_expected_shop_costs(
@@ -56,6 +57,8 @@ def main() -> None:
         fleet=scenario.fleet,
         horizon_months=T,
         shop_capacity=scenario.shop_capacity,
+        shop_duration_months=scenario.shop_duration_months,
+        max_rentals_per_month=scenario.max_rentals_per_month,
         n_required=n_required,
         n_scenarios=S,
         costs=scenario.costs,
@@ -74,8 +77,10 @@ def main() -> None:
         costs=scenario.costs,
         operable=oper,
         expected_shop_cost=c_shop,
+        shop_duration_months=scenario.shop_duration_months,
+        max_rentals_per_month=scenario.max_rentals_per_month,
         seed=seed,
-        epoch=400,
+        epoch=200,
         pop_size=80,
         pc=0.9,
         pm=0.2,
@@ -126,23 +131,23 @@ def main() -> None:
         if cpsat is not None:
             avg_r_c = sum(cpsat.rentals[(t, s)] for s in range(S)) / S
             avg_d_c = sum(cpsat.downtime[(t, s)] for s in range(S)) / S
+            max_d_c = max(cpsat.downtime[(t, s)] for s in range(S))
         else:
-            avg_r_c = avg_d_c = float("nan")
+            avg_r_c = avg_d_c = max_d_c = float("nan")
 
         if ga is not None:
-            avg_r_g = ga.rentals_avg[t]
-            avg_d_g = ga.downtime_avg[t]
+            avg_r_g = sum(ga.rentals[(t, s)] for s in range(S)) / S
+            avg_d_g = sum(ga.downtime[(t, s)] for s in range(S)) / S
+            max_d_g = max(ga.downtime[(t, s)] for s in range(S))
         else:
-            avg_r_g = avg_d_g = float("nan")
+            avg_r_g = avg_d_g = max_d_g = float("nan")
 
         print(
-            f"month {t:02d} | CP-SAT rentals={avg_r_c:6.2f} downtime={avg_d_c:6.2f}"
-            f"   ||   GA rentals={avg_r_g:6.2f} downtime={avg_d_g:6.2f}"
+            f"month {t:02d} | "
+            f"CP-SAT rentals={avg_r_c:6.2f} downtime={avg_d_c:6.2f} worst={max_d_c:2.0f} "
+            f"|| GA rentals={avg_r_g:6.2f} downtime={avg_d_g:6.2f} worst={max_d_g:2.0f}"
         )
 
-    print()
-
-    # Optional: print schedules
     if cpsat is not None:
         print("CP-SAT schedule (engine -> month):")
         for k in sorted(cpsat.schedule.keys()):

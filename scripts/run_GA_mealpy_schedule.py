@@ -58,7 +58,7 @@ def main() -> None:
         shop_duration_months=scenario.shop_duration_months,
         max_rentals_per_month=scenario.max_rentals_per_month,
         seed=123,
-        epoch=40,
+        epoch=200,
         pop_size=80,
         pc=0.9,
         pm=0.2,
