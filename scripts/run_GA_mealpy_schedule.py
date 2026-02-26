@@ -15,7 +15,7 @@ def main() -> None:
     S = 30
 
     n_required = max(0, len(scenario.fleet.engines) - scenario.spares)
-    print("Engines:", len(scenario.fleet.engines), "Spares:", scenario.spares, "Required:", n_required)
+    print("Engines:", len(scenario.fleet.engines), ", Spares:", scenario.spares, ", Required:", n_required)
 
     # Sample stochastic deterioration scenarios (reproducible)
     dh = sample_deterioration_deltas(
@@ -33,6 +33,7 @@ def main() -> None:
         horizon_months=T,
         n_scenarios=S,
         h_min=scenario.h_min,
+        shop_duration_months=scenario.shop_duration_months,
     )
 
     # Precompute expected shop costs E[C_shop | shop at month m]
@@ -54,8 +55,10 @@ def main() -> None:
         costs=scenario.costs,
         operable=oper,
         expected_shop_cost=c_shop,
+        shop_duration_months=scenario.shop_duration_months,
+        max_rentals_per_month=scenario.max_rentals_per_month,
         seed=123,
-        epoch=400,
+        epoch=40,
         pop_size=80,
         pc=0.9,
         pm=0.2,
@@ -71,7 +74,10 @@ def main() -> None:
 
     print("\n=== Expected rentals/downtime per month (avg over scenarios) ===")
     for t in range(1, T + 1):
-        print(f"month {t:02d}: rentals={res.rentals_avg[t]:.2f}, downtime={res.downtime_avg[t]:.2f}")
+        avg_r = sum(res.rentals[(t, s)] for s in range(S)) / S
+        avg_d = sum(res.downtime[(t, s)] for s in range(S)) / S
+        max_d = max(res.downtime[(t,s)] for s in range(S))
+        print(f"month {t:02d}: rentals={avg_r:.2f}, downtime={avg_d:.2f}, worst-case={max_d}")
 
     print("\nGA Objective (expected cost):", round(res.objective, 2))
 

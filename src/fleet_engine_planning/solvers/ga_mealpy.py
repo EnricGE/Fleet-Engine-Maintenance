@@ -23,48 +23,92 @@ except Exception:
 class ScheduleResult:
     schedule: Dict[str, int]                # engine_id -> shop_month (0..T)
     objective: float
-    rentals_avg: Dict[int, float]           # month -> avg rentals over scenarios
-    downtime_avg: Dict[int, float]          # month -> avg downtime over scenarios
+    rentals: Dict[Tuple[int, int], int]
+    downtime: Dict[Tuple[int, int], int]
 
 
-def _repair_capacity(months: np.ndarray, cap: List[int], T: int, rng: np.random.Generator) -> np.ndarray:
+def _capacity_usage(months: np.ndarray, T: int, D: int) -> np.ndarray:
     """
-    Repair a schedule vector months[i] in {0..T} so that
-    for each month m=1..T: count(months==m) <= cap[m-1].
+    usage[t] = number of engines occupying shop capacity in month t (1..T)
+    where a start at month m occupies months m..m+D-1 (clipped to horizon).
+    """
+    usage = np.zeros(T + 1, dtype=int)  # index 0 unused
+    for m in months:
+        m = int(m)
+        if m <= 0:
+            continue
+        for t in range(m, min(T, m + D - 1) + 1):
+            usage[t] += 1
+    return usage
 
-    Simple greedy repair:
-      - For an overloaded month, move random engines to the nearest month with free cap,
-        otherwise set to 0 (no shop).
+
+def _repair_capacity_with_duration(
+    months: np.ndarray,
+    cap: List[int],
+    T: int,
+    D: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """
+    Repair a schedule vector months[i] in {0..T} so that for each month t:
+      usage[t] <= cap[t-1]
+    where usage accounts for shop duration D.
+
+    Strategy:
+      While any month overloaded:
+        - pick an engine that contributes to an overloaded month
+        - move its shop start to a feasible month (nearest with slack), otherwise set to 0
     """
     months = months.astype(int).copy()
+    cap_arr = np.array([0] + [int(x) for x in cap], dtype=int)  # cap_arr[t] for t=1..T
 
-    for m in range(1, T + 1):
-        limit = int(cap[m - 1])
-        idx = np.where(months == m)[0]
-        if len(idx) <= limit:
-            continue
+    for _ in range(2000):  # safety to avoid infinite loops
+        usage = _capacity_usage(months, T, D)
+        overload_months = np.where(usage[1:] > cap_arr[1:])[0] + 1  # months 1..T
 
-        excess = len(idx) - limit
-        rng.shuffle(idx)
-        move_idx = idx[:excess]
+        if len(overload_months) == 0:
+            return months
 
-        for i in move_idx:
-            placed = False
+        t_over = int(rng.choice(overload_months))
 
-            # try nearest months first
-            for delta in range(1, T + 1):
-                for m2 in (m - delta, m + delta):
-                    if 1 <= m2 <= T:
-                        if int(np.sum(months == m2)) < int(cap[m2 - 1]):
-                            months[i] = m2
-                            placed = True
-                            break
-                if placed:
-                    break
+        # Engines that occupy capacity in t_over
+        idx = []
+        for i, m in enumerate(months):
+            m = int(m)
+            if m > 0 and (m <= t_over <= min(T, m + D - 1)):
+                idx.append(i)
 
-            if not placed:
-                months[i] = 0  # give up: no shop in horizon
+        if not idx:
+            # shouldn't happen, but break safely
+            return months
 
+        i = int(rng.choice(idx))
+        m_old = int(months[i])
+
+        # try to relocate start month
+        placed = False
+        candidates = list(range(1, T + 1))
+        # sort by distance to current start
+        candidates.sort(key=lambda mm: abs(mm - m_old))
+
+        for m_new in candidates:
+            if m_new == m_old:
+                continue
+
+            # test if moving i to m_new keeps capacity feasible
+            test = months.copy()
+            test[i] = m_new
+            usage_test = _capacity_usage(test, T, D)
+            if np.all(usage_test[1:] <= cap_arr[1:]):
+                months[i] = m_new
+                placed = True
+                break
+
+        if not placed:
+            # fallback: remove the shop visit
+            months[i] = 0
+
+    # If repair didn't converge, return best effort
     return months
 
 
@@ -77,6 +121,7 @@ def _evaluate_schedule(
     costs: CostParams,
     operable: Dict[Tuple[str, int, int, int], int],
     expected_shop_cost: Dict[Tuple[str, int], float],
+    max_rentals_per_month: int,
 ) -> Tuple[float, Dict[int, float], Dict[int, float]]:
     """
     Compute objective + avg rentals/downtime per month.
@@ -94,10 +139,10 @@ def _evaluate_schedule(
         if m >= 1:
             shop_cost += float(expected_shop_cost[(i, int(m))])
 
-    rentals_sum = {t: 0.0 for t in range(1, T + 1)}
-    downtime_sum = {t: 0.0 for t in range(1, T + 1)}
+    rentals = {}
+    downtime = {}
 
-    use_rentals = costs.rental_cost <= costs.downtime_cost
+    max_r = int(max_rentals_per_month)
 
     for t in range(1, T + 1):
         for s in range(S):
@@ -106,29 +151,30 @@ def _evaluate_schedule(
                 oper_count += int(operable[(i, t, s, int(m))])
 
             shortage = max(0, int(n_required) - int(oper_count))
-            if shortage > 0:
-                if use_rentals:
-                    rentals_sum[t] += shortage
-                else:
-                    downtime_sum[t] += shortage
 
-    # expected (average over scenarios)
-    rentals_avg = {t: rentals_sum[t] / S for t in range(1, T + 1)}
-    downtime_avg = {t: downtime_sum[t] / S for t in range(1, T + 1)}
+            rent = min(shortage, max_r)
+            down = shortage - rent
 
-    # objective: expected costs (avg over scenarios for rentals/downtime)
+            rentals[(t, s)] = rent
+            downtime[(t, s)] = down
+
+    # Compute expected slack cost
     slack_cost = 0.0
     for t in range(1, T + 1):
-        slack_cost += rentals_avg[t] * costs.rental_cost + downtime_avg[t] * costs.downtime_cost
+        avg_r = sum(rentals[(t, s)] for s in range(S)) / S
+        avg_d = sum(downtime[(t, s)] for s in range(S)) / S
+        slack_cost += avg_r * costs.rental_cost + avg_d * costs.downtime_cost
 
     total = shop_cost + slack_cost
-    return total, rentals_avg, downtime_avg
 
+    return total, rentals, downtime
 
 def solve_ga_mealpy(
     fleet: Fleet,
     horizon_months: int,
     shop_capacity: List[int],
+    shop_duration_months: int,
+    max_rentals_per_month: int,
     n_required: int,
     n_scenarios: int,
     costs: CostParams,
@@ -161,6 +207,8 @@ def solve_ga_mealpy(
     n = len(engine_ids)
     rng = np.random.default_rng(seed)
 
+    D = int(shop_duration_months)
+
     # --- Define MEALPY Problem ---
     if _MEALPY_V3:
         bounds = IntegerVar(lb=[0] * n, ub=[T] * n)
@@ -171,14 +219,14 @@ def solve_ga_mealpy(
 
             def generate_position(self):
                 x = rng.integers(low=0, high=T + 1, size=n, dtype=int)
-                x = _repair_capacity(x, shop_capacity, T, rng)
+                x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
                 return x
 
             def amend_position(self, solution):
                 # MEALPY may pass numpy float; force int and repair
                 x = np.rint(solution).astype(int)
                 x = np.clip(x, 0, T)
-                x = _repair_capacity(x, shop_capacity, T, rng)
+                x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
                 return x
 
             def obj_func(self, solution):
@@ -192,6 +240,7 @@ def solve_ga_mealpy(
                     costs=costs,
                     operable=operable,
                     expected_shop_cost=expected_shop_cost,
+                    max_rentals_per_month=max_rentals_per_month,
                 )
                 return total
 
@@ -206,7 +255,7 @@ def solve_ga_mealpy(
             def amend_position(self, solution):
                 x = np.rint(solution).astype(int)
                 x = np.clip(x, 0, T)
-                x = _repair_capacity(x, shop_capacity, T, rng)
+                x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
                 return x
 
             def obj_func(self, solution):
@@ -226,14 +275,13 @@ def solve_ga_mealpy(
     problem = FleetScheduleProblem()
 
     # --- Choose GA variant ---
-    # MEALPY offers multiple GA variants; this is a solid default.
     model = GA.BaseGA(epoch=epoch, pop_size=pop_size, pc=pc, pm=pm)
     model.solve(problem)
 
     best = model.g_best.solution  # encoded solution
     best_int = problem.amend_position(best)
 
-    obj, rentals_avg, downtime_avg = _evaluate_schedule(
+    obj, rentals, downtime = _evaluate_schedule(
         engine_ids=engine_ids,
         months=best_int,
         T=T,
@@ -242,7 +290,13 @@ def solve_ga_mealpy(
         costs=costs,
         operable=operable,
         expected_shop_cost=expected_shop_cost,
+        max_rentals_per_month=max_rentals_per_month,
     )
 
     schedule = {eid: int(m) for eid, m in zip(engine_ids, best_int)}
-    return ScheduleResult(schedule=schedule, objective=float(obj), rentals_avg=rentals_avg, downtime_avg=downtime_avg)
+    return ScheduleResult(
+        schedule=schedule,
+        objective=float(obj),
+        rentals=rentals,
+        downtime=downtime,
+)
