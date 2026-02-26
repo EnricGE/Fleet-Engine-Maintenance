@@ -1,34 +1,55 @@
 # 🔧 Fleet-Level Engine Planning - Deterioration Uncertainty
 
-This project models and optimizes fleet-level engine shop visit planning under uncertain health deterioration.
+This project models and optimizes **fleet-level engine shop visit planning** under uncertain health deterioration.
 
-The objective is to:
--  Schedule engine shop visits over a finite planning horizon
--  Respect shop capacity constraints
+The goal is to determine **when each engine should enter the shop** over a finite planning horizon in order to:
 -  Maintain fleet operability above an airworthiness threshold
--  Minimize total expected cost (maintenance + rentals + downtime)
+-  Respect shop capacity constraints
+-  Control rental and downtime exposure
+-  Minimize total expected cost
 
-Uncertainty is modeled via stochastic deterioration of engine health. Is handled using Monte Carlo sampling and solved via Sample Average Approximation (SAA).
+Uncertainty in engine health degradation is modeled using **Monte Carlo simulation** and handled through **Sample Average Approximation (SAA)**.
 
-## What it does
+## Problem Overview
+Each engine deteriorates stochastically over time.
+If health drops below a defined threshold, the engine becomes unserviceable, potentially causing:
+-  Aircraft downtime
+-  Costly short-term rentals
+-  Operational disruption
 
--   Simulates stochastic engine health degradation (Monte Carlo)
--   Health-based maintenance cost
--   Enforces airworthiness constraint (health ≥ threshold)
--   Schedules shop visits with capacity limits
--   Allows limited rentals and penalized downtime
--   Minimizes expected total cost (maintenance + rentals + downtime)
+The planner must anticipate degradation uncertainty and schedule shop visits proactively while balancing:
+-  Maintenance cost
+-  Rental cost
+-  Downtime penalties
+-  Capacity constraints
 
-## Solvers
+## Model Capabilities
 
--   **CP-SAT** (reference exact solver)
--   **Genetic Algorithm (MEALPY)** 
+The model includes:
+
+-  Monte Carlo simulation of stochastic engine degradation
+-  Health-based maintenance cost structure
+-  Airworthiness constraint (health ≥ threshold)
+-  Capacity-constrained shop scheduling
+-  Limited rental availability
+-  Penalized downtime
+-  Expected cost minimization across scenarios (SAA)
+
+## Optimization Approaches
+
+-   **CP-SAT (OR-Tools)**
+Exact constraint programming solver used as reference benchmark.
+-   **Genetic Algorithm (MEALPY)**
+Metaheuristic approach for scalable, large-combinatorial scheduling.
+
+This enables comparison between exact and heuristic methods under increasing fleet size and complexity.
 
 ## Purpose
 
 This project demonstrates: 
 -   Stochastic optimization
--   Sample Average Approximation
+-   Sample Average Approximation (SAA)
 -   Capacity-constrained scheduling
--   Metaheuristic vs exact solver comparison
+-   Exact vs metaheuristic solver comparison
 -   Aviation-focused decision modeling
+-   Risk-aware operational planning
