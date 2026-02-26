@@ -23,6 +23,78 @@
       "age_months": 44,
       "distance_km": 700000,
       "health": 0.35
+    },
+    {
+      "engine_id": "E05",
+      "age_months": 18,
+      "distance_km": 250000,
+      "health": 0.90
+    },
+    {
+      "engine_id": "E06",
+      "age_months": 36,
+      "distance_km": 520000,
+      "health": 0.55
+    },
+    {
+      "engine_id": "E07",
+      "age_months": 10,
+      "distance_km": 120000,
+      "health": 0.75
+    },
+    {
+      "engine_id": "E08",
+      "age_months": 44,
+      "distance_km": 700000,
+      "health": 0.35
+    },
+    {
+      "engine_id": "E09",
+      "age_months": 18,
+      "distance_km": 250000,
+      "health": 0.90
+    },
+    {
+      "engine_id": "E10",
+      "age_months": 36,
+      "distance_km": 520000,
+      "health": 0.55
+    },
+    {
+      "engine_id": "E11",
+      "age_months": 10,
+      "distance_km": 120000,
+      "health": 0.75
+    },
+    {
+      "engine_id": "E12",
+      "age_months": 44,
+      "distance_km": 700000,
+      "health": 0.35
+    },
+    {
+      "engine_id": "E13",
+      "age_months": 18,
+      "distance_km": 250000,
+      "health": 0.90
+    },
+    {
+      "engine_id": "E14",
+      "age_months": 36,
+      "distance_km": 520000,
+      "health": 0.55
+    },
+    {
+      "engine_id": "E15",
+      "age_months": 10,
+      "distance_km": 120000,
+      "health": 0.75
+    },
+    {
+      "engine_id": "E16",
+      "age_months": 44,
+      "distance_km": 700000,
+      "health": 0.35
     }
   ]
 }

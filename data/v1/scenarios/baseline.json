@@ -5,7 +5,7 @@
   "shop_capacity": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
   "shop_duration_months": 2,
 
-  "spares": 1,
+  "spares": 2,
   "max_rentals_per_month": 2,
   "h_min": 0.25,
 
