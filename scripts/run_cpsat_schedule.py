@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fleet_engine_planning.preprocessing.loaders import load_scenario
 from fleet_engine_planning.simulation.deterioration import sample_deterioration_deltas
 from fleet_engine_planning.optimizer.precompute import build_operability_tensor, build_expected_shop_costs
 from fleet_engine_planning.solvers.cpsat_schedule import solve_cpsat_schedule_with_rentals
+from fleet_engine_planning.visualization.schedule_plots import save_standard_plots
+from fleet_engine_planning.visualization.health_trajectories import plot_engine_health_trajectories
+
 
 
 def main() -> None:
@@ -73,6 +78,42 @@ def main() -> None:
     # objective reporting: note rentals/downtime were summed across scenarios in objective
     # (so objective scale is consistent, but not divided by S). We'll keep it as-is for now.
     print("\nObjective (scaled sum):", round(res.objective, 2))
+
+    save_standard_plots(
+        schedule=res.schedule,
+        rentals=res.rentals,
+        downtime=res.downtime,
+        horizon_months=T,
+        n_scenarios=S,
+        shop_capacity=scenario.shop_capacity,
+        shop_duration_months=scenario.shop_duration_months,
+        max_rentals_per_month=scenario.max_rentals_per_month,
+        expected_shop_cost=c_shop,
+        rental_cost=scenario.costs.rental_cost,
+        downtime_cost=scenario.costs.downtime_cost,
+        out_dir=Path("outputs"),
+        prefix="cpsat",
+    )
+    print("\nSaved plots to outputs/")
+
+    engine = scenario.fleet.engines[0]
+    eid = engine.engine_id
+
+    plot_engine_health_trajectories(
+        engine_id=eid,
+        h0=engine.health,
+        dh=dh,
+        horizon_months=T,
+        n_scenarios=S,
+        shop_start_month=res.schedule[eid],
+        shop_duration_months=scenario.shop_duration_months,
+        h_min=scenario.h_min,
+        out_path=Path("outputs") / f"cpsat_health_trajectories_{eid}.png",
+        n_paths=35,   # 20–50
+        seed=1,
+    )
+
+    print(f"Saved health trajectory plot for {eid} to outputs/")
 
 
 if __name__ == "__main__":

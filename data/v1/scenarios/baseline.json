@@ -2,11 +2,11 @@
   "fleet_file": "../fleets/fleet_001.json",
   
   "horizon_months": 12,
-  "shop_capacity": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+  "shop_capacity": [2, 1, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2],
   "shop_duration_months": 2,
 
   "spares": 2,
-  "max_rentals_per_month": 2,
+  "max_rentals_per_month": 4,
   "h_min": 0.25,
 
   "costs": {
