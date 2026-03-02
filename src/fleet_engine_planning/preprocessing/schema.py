@@ -17,6 +17,9 @@ class Scenario:
     deterioration: DeteriorationParams
     fleet: Fleet
 
+    window_length: int = 6
+    commit_length: int = 2
+
     @property
     def n_required(self) -> int:
         return max(0, len(self.fleet.engines) - self.spares)

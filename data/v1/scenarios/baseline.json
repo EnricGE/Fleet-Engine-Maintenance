@@ -2,6 +2,9 @@
   "fleet_file": "../fleets/fleet_001.json",
   
   "horizon_months": 12,
+  "window_length": 6,
+  "commit_length": 3,
+
   "shop_capacity": [2, 1, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2],
   "shop_duration_months": 2,
 

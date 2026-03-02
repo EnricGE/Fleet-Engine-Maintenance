@@ -43,6 +43,8 @@ def load_scenario(path: str | Path) -> Scenario:
     Scenario JSON must contain:
         - fleet_file
         - horizon_months
+        - window_length
+        - commit_length
         - shop_capacity
         - shop_duration_months
         - spares
@@ -62,6 +64,9 @@ def load_scenario(path: str | Path) -> Scenario:
     fleet = load_fleet_from_json(fleet_path)
 
     horizon = int(data["horizon_months"])
+    window_length = int(data.get("window_length", 6))
+    commit_length = int(data.get("commit_length", 2))
+
     capacity = [int(x) for x in data["shop_capacity"]]
     if len(capacity) != horizon:
         raise ValueError("shop_capacity length must equal horizon_months")
@@ -89,6 +94,8 @@ def load_scenario(path: str | Path) -> Scenario:
 
     return Scenario(
         horizon_months=horizon,
+        window_length=window_length,
+        commit_length=commit_length,
         shop_capacity=capacity,
         shop_duration_months=shop_duration,
         spares=spares,
