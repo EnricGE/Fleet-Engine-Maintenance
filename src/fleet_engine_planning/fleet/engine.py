@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from typing import List
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Engine:
     """State of one engine at decision time."""
     engine_id: str
-    age_months: float          # month
+    age_months: float      # month
     distance_km: float     # km
-    health: float # [0..1]
+    health: float          # [0..1]
 
 
 @dataclass
