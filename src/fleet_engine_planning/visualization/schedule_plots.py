@@ -59,21 +59,44 @@ def _money_formatter(x, _pos) -> str:
 # Core computations
 # -----------------------------
 
-def _compute_shop_occupancy(
+def compute_shop_occupancy(
     schedule: Dict[str, int],
     horizon_months: int,
     shop_duration_months: int,
 ) -> np.ndarray:
+    """
+    occupancy[t] = number of engines in shop during month t (1..T).
+    """
     T = int(horizon_months)
     D = int(shop_duration_months)
-    occ = np.zeros(T + 1, dtype=int)  # index 0 unused
-    for m in schedule.values():
-        m = int(m)
-        if m <= 0:
+    occupancy = np.zeros(T + 1, dtype=int)
+
+    for start in schedule.values():
+        start = int(start)
+        if start <= 0:
             continue
-        for t in range(m, min(T, m + D - 1) + 1):
-            occ[t] += 1
-    return occ
+        for t in range(start, min(T, start + D - 1) + 1):
+            occupancy[t] += 1
+
+    return occupancy
+
+
+def compute_capacity_utilization_pct(
+    occupancy: np.ndarray,
+    shop_capacity: List[int],
+    horizon_months: int,
+) -> np.ndarray:
+    """
+    utilization[t] = 100 * occupancy[t] / capacity[t] for t=1..T (0 if capacity=0).
+    """
+    T = int(horizon_months)
+    cap = np.array([0] + [int(x) for x in shop_capacity], dtype=float)
+    utilization = np.zeros(T + 1, dtype=float)
+
+    for t in range(1, T + 1):
+        utilization[t] = 0.0 if cap[t] <= 0 else 100.0 * float(occupancy[t]) / cap[t]
+
+    return utilization
 
 
 def _compute_shop_starts(schedule: Dict[str, int], horizon_months: int) -> np.ndarray:
@@ -124,7 +147,8 @@ def plot_shop_occupancy_vs_capacity(
     _apply_style(style)
     T = int(horizon_months)
     cap = np.array([0] + [int(x) for x in shop_capacity], dtype=int)
-    occ = _compute_shop_occupancy(schedule, T, shop_duration_months)
+    occupancy = compute_shop_occupancy(schedule, T, shop_duration_months)
+    utilization = compute_capacity_utilization_pct(occupancy, shop_capacity, T)
 
     x = np.arange(1, T + 1)
 
@@ -134,7 +158,7 @@ def plot_shop_occupancy_vs_capacity(
     ax.plot(x, cap[1:], marker="o", linewidth=1.5)
 
     # Occupancy line
-    ax.plot(x, occ[1:], marker="o", linewidth=2.0, label="Shop occupancy")
+    ax.plot(x, utilization[1:], marker="o", linewidth=2.0, label="Shop occupancy")
 
     ax.set_xlabel("Month")
     ax.set_ylabel("Engines in shop")
@@ -159,11 +183,11 @@ def plot_capacity_utilization_percent(
     _apply_style(style)
     T = int(horizon_months)
     cap = np.array([0] + [int(x) for x in shop_capacity], dtype=float)
-    occ = _compute_shop_occupancy(schedule, T, shop_duration_months).astype(float)
+    occupancy = compute_shop_occupancy(schedule, T, shop_duration_months)
 
     util = np.zeros(T + 1, dtype=float)
     for t in range(1, T + 1):
-        util[t] = 0.0 if cap[t] <= 0 else 100.0 * occ[t] / cap[t]
+        util[t] = 0.0 if cap[t] <= 0 else 100.0 * occupancy[t] / cap[t]
 
     x = np.arange(1, T + 1)
 
