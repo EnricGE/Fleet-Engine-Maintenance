@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Dict, Tuple
 
-from fleet_engine_planning.fleet.costs import maintenance_cost
-from fleet_engine_planning.fleet.engine import Fleet
+from fleet_engine_planning.domain.costs import maintenance_cost
+from fleet_engine_planning.domain.engine import Fleet
 from fleet_engine_planning.preprocessing.schema import CostParams
 from fleet_engine_planning.simulation.deterioration import (
     health_at_start_of_month,
