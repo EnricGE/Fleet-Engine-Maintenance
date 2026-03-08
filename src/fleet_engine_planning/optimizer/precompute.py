@@ -14,25 +14,29 @@ from fleet_engine_planning.simulation.deterioration import (
 def build_operability_tensor(
     fleet: Fleet,
     dh: Dict[Tuple[str, int, int], float],
-    horizon_months: int,
+    horizon_months: int,  # planning horizon H
     n_scenarios: int,
     h_min: float,
     shop_duration_months: int,
 ) -> Dict[Tuple[str, int, int, int], int]:
     """
     Returns a[(engine_id, month, scenario, shop_month)] in {0,1}
-      month = 1..T
-      scenario = 0..S-1
-      shop_month = 0..T
+
+      planning horizon = H = horizon_months
+      month t = 1..H+1  (includes terminal month H+1)
+      shop_month m = 0..H
+      scenario s = 0..S-1
+
+    Requires dh[(engine_id, t, s)] for t=1..H+1 (so sample dh with H+1).
     """
-    T = int(horizon_months)
+    H = int(horizon_months)
     S = int(n_scenarios)
     a: Dict[Tuple[str, int, int, int], int] = {}
 
     for e in fleet.engines:
         for s in range(S):
-            for m in range(0, T + 1):
-                for t in range(1, T + 1):
+            for m in range(0, H + 1):
+                for t in range(1, H + 2):  # 1..H+1
                     a[(e.engine_id, t, s, m)] = operable_under_single_shop(
                         h0=e.health,
                         dh=dh,

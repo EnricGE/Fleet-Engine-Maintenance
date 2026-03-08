@@ -62,6 +62,15 @@ def main() -> None:
         realized_scenario_index=0,
     )
 
+    total = 0.0
+
+    for t in range(1, H + 1):
+        avg_r = sum(plan.rentals[(t, s)] for s in range(S)) / S
+        avg_d = sum(plan.downtime[(t, s)] for s in range(S)) / S
+        total += plan.maint_cost[t] + avg_r * scenario.costs.rental_cost + avg_d * scenario.costs.downtime_cost
+
+    print(f"\nRolling horizon expected committed cost (1..{H}): {total:,.0f}")
+
     print("\n=== Rolling horizon (first shop start month) ===")
     for eid in sorted(plan.first_start_month.keys()):
         print(eid, "->", plan.first_start_month[eid])
@@ -85,6 +94,17 @@ def main() -> None:
         out_dir=Path("outputs"),
         prefix="rolling_cpsat",
     )
+    print("\n=== Rolling: avg downtime per month ===")
+    for t in range(1, H+1):
+        avg_d = sum(plan.downtime[(t,s)] for s in range (S))/S
+        print(t, avg_d)
+
+    print("\n=== Rolling: rentals/downtime (avg over scenarios) ===")
+    for t in range(1, H+1):
+        avg_r = sum(plan.rentals[(t,s)] for s in range(S))/S
+        avg_d = sum(plan.downtime[(t,s)] for s in range(S))/S
+        worst_d = max(plan.downtime[(t,s)] for s in range(S))
+        print(f"month {t:02d}: rentals={avg_r:.2f}, downtime={avg_d:.2f}, worst={worst_d}")
 
     # Save plan starts to file
     out_plan = Path("outputs") / "rolling_plan_shop_starts.txt"

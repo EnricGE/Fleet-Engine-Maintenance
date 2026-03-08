@@ -19,6 +19,7 @@ class Scenario:
 
     window_length: int = 6
     commit_length: int = 2
+    terminal_health_target: float = 0.6
 
     @property
     def n_required(self) -> int:
@@ -31,6 +32,8 @@ class CostParams:
     rental_cost: float
     downtime_cost: float
     gamma_health_cost: float = 1.0
+    terminal_shortfall_cost: float = 0.0    # eta
+    terminal_inop_cost: float = 0.0         # kappa
 
 
 @dataclass(frozen=True)

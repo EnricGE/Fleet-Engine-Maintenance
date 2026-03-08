@@ -10,7 +10,6 @@ from fleet_engine_planning.visualization.schedule_plots import save_standard_plo
 from fleet_engine_planning.visualization.health_trajectories import plot_engine_health_trajectories
 
 
-
 def main() -> None:
     scenario = load_scenario("data/v1/scenarios/baseline.json")
 
@@ -22,7 +21,7 @@ def main() -> None:
 
     dh = sample_deterioration_deltas(
         fleet=scenario.fleet,
-        horizon_months=T,
+        horizon_months=T+1,
         n_scenarios=S,
         params=scenario.deterioration,
         seed=123,

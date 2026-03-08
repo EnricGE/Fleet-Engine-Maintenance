@@ -3,7 +3,7 @@
   
   "horizon_months": 12,
   "window_length": 6,
-  "commit_length": 3,
+  "commit_length": 2,
 
   "shop_capacity": [2, 1, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2],
   "shop_duration_months": 2,
@@ -16,7 +16,9 @@
     "base_maint_cost": 12000.0,
     "rental_cost": 45000.0,
     "downtime_cost": 2000000.0,
-    "gamma_health_cost": 1.0
+    "gamma_health_cost": 1.0,
+    "terminal_shortfall_cost": 100000.0,
+    "terminal_inop_cost": 50000.0
   },
 
   "deterioration_model": {

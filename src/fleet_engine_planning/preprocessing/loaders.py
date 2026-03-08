@@ -82,6 +82,8 @@ def load_scenario(path: str | Path) -> Scenario:
         rental_cost=float(c["rental_cost"]),
         downtime_cost=float(c["downtime_cost"]),
         gamma_health_cost=float(c.get("gamma_health_cost", 1.0)),
+        terminal_shortfall_cost=float(c.get("terminal_shortfall_cost", 0.0)),
+        terminal_inop_cost=float(c.get("terminal_inop_cost", 0.0)),
     )
 
     d = data["deterioration_model"]

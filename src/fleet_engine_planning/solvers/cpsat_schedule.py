@@ -33,7 +33,7 @@ def solve_cpsat_schedule_with_rentals(
     """
     Decision: choose one shop month m in {0..T} for each engine i.
       - m=0 means no shop in horizon
-      - m>=1: engine in shop during month m (unavailable), returns at m+1 reset
+      - m>=1: engine in shop during month m (unavailable), returns at m+D reset
 
     Constraints:
       - capacity per month
@@ -101,6 +101,7 @@ def solve_cpsat_schedule_with_rentals(
     # Objective: shop + expected rentals + expected downtime
     # Use integer scaling to keep CP-SAT happy with floats.
     SCALE = 100 
+    S_INV = max(1, S)
     obj_terms = []
 
     # shop costs
@@ -110,12 +111,23 @@ def solve_cpsat_schedule_with_rentals(
             obj_terms.append(int(round(c * SCALE)) * y[(i, m)])
 
     # rentals/downtime average over scenarios
-    # expected cost = (1/S) * sum_{t,s} cost * var
-    # implement as sum_{t,s} cost * var, then divide at the end for reporting
+    r_cost = max(1, int(round(costs.rental_cost * SCALE / S_INV)))
+    d_cost = max(1, int(round(costs.downtime_cost * SCALE / S_INV)))
+
     for t in range(1, T + 1):
         for s in range(S):
-            obj_terms.append(int(round(costs.rental_cost * SCALE)) * r[(t, s)])
-            obj_terms.append(int(round(costs.downtime_cost * SCALE)) * d[(t, s)])
+            obj_terms.append(r_cost * r[(t, s)])
+            obj_terms.append(d_cost * d[(t, s)])
+
+    # Terminal penalty: penalize P(inoperable at start of month T+1)
+    kappa = float(costs.terminal_inop_cost)
+    if kappa > 0.0:
+        t_term = T + 1  # now exists in operable tensor
+        for i in engine_ids:
+            for m in range(0, T + 1):
+                p_inop = sum(1 - int(operable[(i, t_term, s, m)]) for s in range(S)) / S
+                if p_inop > 0.0:
+                    obj_terms.append(int(round(kappa * p_inop * SCALE)) * y[(i, m)])
 
     model.Minimize(sum(obj_terms))
 

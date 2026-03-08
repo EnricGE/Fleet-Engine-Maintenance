@@ -17,12 +17,11 @@ class RollingState:
 
 @dataclass
 class RollingPlan:
-    # committed starts: (engine_id, abs_month) -> 0/1
-    shop_starts: Dict[Tuple[str, int], int]
-    # first start month view (keeps compatibility with current plots)
-    first_start_month: Dict[str, int]
-    rentals: Dict[Tuple[int, int], int]   # (abs_month, scenario)
-    downtime: Dict[Tuple[int, int], int]  # (abs_month, scenario)
+    shop_starts: Dict[Tuple[str, int], int] # committed starts: (engine_id, abs_month) -> 0/1
+    first_start_month: Dict[str, int]       # first start month view (keeps compatibility with current plots)
+    rentals: Dict[Tuple[int, int], int]     # (abs_month, scenario)
+    downtime: Dict[Tuple[int, int], int]    # (abs_month, scenario)
+    maint_cost: Dict[int, float]            # expected maintenance cost per abs month
 
 
 @dataclass(frozen=True)
@@ -78,7 +77,13 @@ def _roll_forward_one_month(
 
         # start shop now?
         if shop_starts_this_month.get(eid, 0) == 1:
-            state.shop_remaining[eid] = D
+            # shop starts this month, so the current month already counts as one in-shop month
+            state.shop_remaining[eid] = max(0, D - 1)
+
+            # if duration is 1 month, engine returns next month with reset health
+            if D == 1:
+                eng.health = 1.0
+
             # no distance / no deterioration during shop month by convention
             continue
 
@@ -126,6 +131,7 @@ def run_rolling_horizon(
 
     rentals_plan: Dict[Tuple[int, int], int] = {(t, s): 0 for t in range(1, H + 1) for s in range(n_scenarios)}
     downtime_plan: Dict[Tuple[int, int], int] = {(t, s): 0 for t in range(1, H + 1) for s in range(n_scenarios)}
+    maint_cost_plan: Dict[int, float] = {t: 0.0 for t in range(1, H + 1)}
 
     t0 = 0
     while t0 < H:
@@ -144,7 +150,7 @@ def run_rolling_horizon(
         # sample scenarios from current state
         dh = sample_deterioration_deltas(
             fleet=fleet_now,
-            horizon_months=W_eff,
+            horizon_months=W_eff + 1,
             n_scenarios=n_scenarios,
             params=scenario.deterioration,
             seed=seed + t0,
@@ -158,6 +164,12 @@ def run_rolling_horizon(
             h_min=scenario.h_min,
             shop_duration_months=scenario.shop_duration_months,
         )
+        for eid, remaining in state.shop_remaining.items():
+            if remaining > 0:
+                for t in range(1, min(remaining, W_eff) + 1):
+                    for s in range(n_scenarios):
+                        for m in range(0, W_eff + 1):
+                            oper[(eid, t, s, m)] = 0
 
         c_shop = build_expected_shop_costs(
             fleet=fleet_now,
@@ -190,6 +202,13 @@ def run_rolling_horizon(
 
             shop_starts_now = {eid: 1 if int(schedule_window[eid]) == local_month else 0 for eid in engine_ids}
 
+            # expected maintenance cost in this committed month (from this window’s c_shop)
+            m_cost = 0.0
+            for eid in engine_ids:
+                if shop_starts_now[eid] == 1:
+                    m_cost += float(c_shop[(eid, local_month)])
+            maint_cost_plan[abs_month] = m_cost
+
             for eid, start in shop_starts_now.items():
                 plan_starts[(eid, abs_month)] = int(start)
                 if start == 1 and first_start_month[eid] == 0:
@@ -197,12 +216,14 @@ def run_rolling_horizon(
 
             # record slack for the committed month from the window solution
             for s in range(n_scenarios):
-                for s in range(n_scenarios):
-                    rentals_plan[(abs_month, s)] = int(window_res.rentals[(local_month, s)])
-                    downtime_plan[(abs_month, s)] = int(window_res.downtime[(local_month, s)])
+                rentals_plan[(abs_month, s)] = int(window_res.rentals[(local_month, s)])
+                downtime_plan[(abs_month, s)] = int(window_res.downtime[(local_month, s)])
 
-            # realized deterioration path for this committed month
-            delta_realized = {eid: dh[(eid, local_month, realized_scenario_index)] for eid in engine_ids}
+            # realized deterioration path for this committed month (mean-behavior MPC)
+            delta_realized = {
+                eid: sum(dh[(eid, local_month, s)] for s in range(n_scenarios)) / n_scenarios
+                for eid in engine_ids
+            }
 
             _roll_forward_one_month(
                 state=state,
@@ -219,4 +240,5 @@ def run_rolling_horizon(
         first_start_month=first_start_month,
         rentals=rentals_plan,
         downtime=downtime_plan,
+        maint_cost=maint_cost_plan,
     )
