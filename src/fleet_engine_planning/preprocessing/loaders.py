@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import List
 
-from fleet_engine_planning.fleet.engine import Engine, Fleet
+from fleet_engine_planning.domain.engine import Engine, Fleet
 from fleet_engine_planning.preprocessing.schema import Scenario, CostParams, DeteriorationParams
 
 

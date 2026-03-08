@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-from fleet_engine_planning.fleet.engine import Fleet
+from fleet_engine_planning.domain.engine import Fleet
 from fleet_engine_planning.preprocessing.schema import DeteriorationParams
 
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fleet_engine_planning.preprocessing.loaders import load_scenario
 from fleet_engine_planning.simulation.deterioration import sample_deterioration_deltas
-from fleet_engine_planning.optimizer.precompute import build_operability_tensor, build_expected_shop_costs
+from fleet_engine_planning.optimization.precompute import build_operability_tensor, build_expected_shop_costs
 from fleet_engine_planning.solvers.cpsat_schedule import solve_cpsat_schedule_with_rentals
 from fleet_engine_planning.visualization.schedule_plots import save_standard_plots
 from fleet_engine_planning.visualization.health_trajectories import plot_engine_health_trajectories

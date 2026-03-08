@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Tuple, Callable
 
-from fleet_engine_planning.fleet.engine import Engine, Fleet
+from fleet_engine_planning.domain.engine import Engine, Fleet
 from fleet_engine_planning.preprocessing.schema import Scenario
 from fleet_engine_planning.simulation.deterioration import sample_deterioration_deltas
 from fleet_engine_planning.optimizer.precompute import build_operability_tensor, build_expected_shop_costs

@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Dict
 
-from fleet_engine_planning.fleet.engine import Fleet
+from fleet_engine_planning.domain.engine import Fleet
 
 
 @dataclass(frozen=True)
