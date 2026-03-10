@@ -22,12 +22,19 @@ from fleet_engine_planning.optimization.precompute import (
 )
 from fleet_engine_planning.solvers.cpsat_schedule import solve_cpsat_schedule_with_rentals
 
+from app.db.database import get_session
+from app.db.models import OptimizationRun
+from app.repositories.run_repository import RunRepository
+
 
 class OptimizationService:
     """
     Application service that bridges external request schemas
     and the internal optimization core.
     """
+
+    def __init__(self):
+        self.repo = RunRepository()
 
     def optimize_schedule(self, request: OptimizationRequest) -> OptimizationResult:
         if request.settings.solver != "cpsat":
@@ -84,9 +91,11 @@ class OptimizationService:
             time_limit_s=request.settings.time_limit_s,
         )
 
+        run_id = str(uuid4())
+
         if result is None:
             return OptimizationResult(
-                run_id=str(uuid4()),
+                run_id=run_id,
                 solver=request.settings.solver,
                 objective=float("nan"),
                 schedule={},
@@ -100,6 +109,22 @@ class OptimizationService:
             horizon_months=T,
             n_scenarios=S,
         )
+
+        with get_session() as session:
+
+            run = OptimizationRun(
+                run_id=run_id,
+                solver=request.settings.solver,
+                objective=result.objective,
+                status="success",
+                horizon_months=request.horizon_months,
+                n_engines=len(request.engines),
+            )
+
+            self.repo.save_run(session, run)
+            self.repo.save_schedule(session, run_id, result.schedule)
+
+            session.commit()
 
         return OptimizationResult(
             run_id=str(uuid4()),
