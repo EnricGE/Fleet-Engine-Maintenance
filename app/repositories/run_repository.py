@@ -1,6 +1,7 @@
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.db.models import OptimizationRun, ScheduleEntry
+from app.db.models import OptimizationRun, ScheduleEntry, MonthlyKPIRecord
+from app.schemas.optimization import MonthlyKPI
 
 
 class RunRepository:
@@ -17,6 +18,17 @@ class RunRepository:
             )
             session.add(entry)
 
+    def save_monthly_kpis(self, session: Session, run_id: str, monthly_kpis: list[MonthlyKPI]):
+        for kpi in monthly_kpis:
+            row = MonthlyKPIRecord(
+                run_id=run_id,
+                month=kpi.month,
+                expected_rentals=kpi.expected_rentals,
+                expected_downtime=kpi.expected_downtime,
+                worst_case_downtime=kpi.worst_case_downtime,
+            )
+            session.add(row)
+
     def get_run(self, session: Session, run_id: str):
         return session.get(OptimizationRun, run_id)
 
@@ -24,3 +36,11 @@ class RunRepository:
         return session.exec(
             ScheduleEntry.select().where(ScheduleEntry.run_id == run_id)
         ).all()
+    
+    def get_monthly_kpis(self, session: Session, run_id: str):
+        statement = (
+            select(MonthlyKPIRecord)
+            .where(MonthlyKPIRecord.run_id == run_id)
+            .order_by(MonthlyKPIRecord.month)
+        )
+        return session.exec(statement).all()

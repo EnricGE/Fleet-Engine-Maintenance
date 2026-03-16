@@ -16,6 +16,11 @@ ENV/
 dist/
 build/
 
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
 # ===============================
 # uv / pip
 # ===============================

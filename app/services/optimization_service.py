@@ -123,6 +123,7 @@ class OptimizationService:
 
             self.repo.save_run(session, run)
             self.repo.save_schedule(session, run_id, result.schedule)
+            self.repo.save_monthly_kpis(session, run_id, monthly_kpis)
 
             session.commit()
 
