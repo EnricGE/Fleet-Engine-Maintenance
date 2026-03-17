@@ -57,7 +57,7 @@ class OptimizationService:
             seed=seed,
         )
 
-        # Precompute operability tensor and expected shop costs
+        # Precompute operability tensor
         oper = build_operability_tensor(
             fleet=scenario.fleet,
             dh=dh,
@@ -67,6 +67,7 @@ class OptimizationService:
             shop_duration_months=scenario.shop_duration_months,
         )
 
+        # Precompute expected shop costs
         c_shop = build_expected_shop_costs(
             fleet=scenario.fleet,
             dh=dh,
@@ -103,6 +104,7 @@ class OptimizationService:
                 status="no_solution",
             )
 
+        # Build Monthly KPIs
         monthly_kpis = self._build_monthly_kpis(
             rentals=result.rentals,
             downtime=result.downtime,
