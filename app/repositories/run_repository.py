@@ -33,9 +33,8 @@ class RunRepository:
         return session.get(OptimizationRun, run_id)
 
     def get_schedule(self, session: Session, run_id: str):
-        return session.exec(
-            ScheduleEntry.select().where(ScheduleEntry.run_id == run_id)
-        ).all()
+        statement = select(ScheduleEntry).where(ScheduleEntry.run_id == run_id)
+        return session.exec(statement).all()
     
     def get_monthly_kpis(self, session: Session, run_id: str):
         statement = (
@@ -43,4 +42,8 @@ class RunRepository:
             .where(MonthlyKPIRecord.run_id == run_id)
             .order_by(MonthlyKPIRecord.month)
         )
+        return session.exec(statement).all()
+    
+    def list_runs(self, session: Session):
+        statement = select(OptimizationRun).order_by(OptimizationRun.created_at.desc())
         return session.exec(statement).all()
