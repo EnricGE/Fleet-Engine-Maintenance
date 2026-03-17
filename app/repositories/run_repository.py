@@ -47,3 +47,14 @@ class RunRepository:
     def list_runs(self, session: Session):
         statement = select(OptimizationRun).order_by(OptimizationRun.created_at.desc())
         return session.exec(statement).all()
+    
+    def get_run_full(self, session: Session, run_id: str):
+        run = session.get(OptimizationRun, run_id)
+
+        if run is None:
+            return None
+
+        schedule = self.get_schedule(session, run_id)
+        monthly_kpis = self.get_monthly_kpis(session, run_id)
+
+        return run, schedule, monthly_kpis

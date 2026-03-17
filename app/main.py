@@ -9,9 +9,13 @@ from app.db.database import engine
 from app.db.models import OptimizationRun
 
 from app.schemas.optimization import OptimizationRequest, OptimizationResult
-from app.services.optimization_service import OptimizationService
-from app.repositories.run_repository import RunRepository
+from app.schemas.run_analysis import RunAnalysisResult
 from app.schemas.run_storage import StoredRunOut, ScheduleEntryOut
+
+from app.services.optimization_service import OptimizationService
+from app.analyzers.run_analyzer import RunAnalyzer
+from app.repositories.run_repository import RunRepository
+
 from app.db.database import create_db_and_tables
 
 
@@ -32,6 +36,7 @@ app = FastAPI(
 
 service = OptimizationService()
 repo = RunRepository()
+analyzer = RunAnalyzer()
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
@@ -75,3 +80,24 @@ def get_run_schedule(run_id: str):
 
         return repo.get_schedule(session, run_id)
     
+
+@app.get("/runs/{run_id}/summary", response_model=RunAnalysisResult)
+def get_run_summary(run_id: str):
+
+    with Session(engine) as session:
+
+        result = repo.get_run_full(session, run_id)
+
+        if result is None:
+            raise HTTPException(status_code=404, detail="Run not found")
+
+        run, schedule_rows, monthly_kpi_rows = result
+
+        analysis = analyzer.analyze_stored_run(
+            run,
+            schedule_rows,
+            monthly_kpi_rows,
+            max_rentals_per_month=4,  # could later come from stored config
+        )
+
+        return analysis
