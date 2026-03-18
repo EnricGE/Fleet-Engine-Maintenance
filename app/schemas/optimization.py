@@ -51,7 +51,6 @@ class OptimizationRequest(BaseModel):
 
     terminal_inop_cost: float = Field(default=0.0, ge=0)
     terminal_shortfall_cost: float = Field(default=0.0, ge=0)
-    terminal_health_target: float = Field(default=0.6, ge=0.0, le=1.0)
 
     km_per_month: float = Field(..., ge=0)
     mu_base: float = Field(..., ge=0)

@@ -27,7 +27,6 @@ payload = {
     "gamma_health_cost": 1.5,
     "terminal_inop_cost": 100000,
     "terminal_shortfall_cost": 100000,
-    "terminal_health_target": 0.6,
     "km_per_month": 25000,
     "mu_base": 0.01,
     "mu_per_1000km": 0.00025,

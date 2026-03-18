@@ -19,7 +19,6 @@ class Scenario:
 
     window_length: int = 6
     commit_length: int = 2
-    terminal_health_target: float = 0.6
 
     @property
     def n_required(self) -> int:
