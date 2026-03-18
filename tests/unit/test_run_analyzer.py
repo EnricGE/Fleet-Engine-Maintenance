@@ -1,56 +1,139 @@
-import sys
-from pathlib import Path
+"""
+Unit tests for RunAnalyzer — pure logic, no DB required.
+"""
+from __future__ import annotations
 
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+import pytest
 
-from app.schemas.optimization import OptimizationRequest
-from app.services.optimization_service import OptimizationService
 from app.analyzers.run_analyzer import RunAnalyzer
+from app.schemas.optimization import MonthlyKPI, OptimizationResult
 
 
-payload = {
-    "engines": [
-        {"engine_id": "E01", "age_months": 24, "distance_km": 420000, "health": 0.72},
-        {"engine_id": "E02", "age_months": 30, "distance_km": 510000, "health": 0.55},
-        {"engine_id": "E03", "age_months": 18, "distance_km": 300000, "health": 0.66},
-        {"engine_id": "E04", "age_months": 40, "distance_km": 700000, "health": 0.30},
-    ],
-    "horizon_months": 12,
-    "shop_capacity": [2] * 12,
-    "shop_duration_months": 2,
-    "spares": 1,
-    "h_min": 0.2,
-    "max_rentals_per_month": 4,
-    "base_maint_cost": 300000,
-    "rental_cost": 50000,
-    "downtime_cost": 2000000,
-    "gamma_health_cost": 1.5,
-    "terminal_inop_cost": 100000,
-    "terminal_shortfall_cost": 100000,
-    "terminal_health_target": 0.6,
-    "km_per_month": 25000,
-    "mu_base": 0.01,
-    "mu_per_1000km": 0.00025,
-    "sigma": 0.004,
-    "window_length": 6,
-    "commit_length": 2,
-    "settings": {
-        "solver": "cpsat",
-        "n_scenarios": 10,
-        "random_seed": 123,
-        "time_limit_s": 5.0,
-    },
-}
+def _make_result(
+    schedule: dict[str, int],
+    monthly_kpis: list[MonthlyKPI],
+) -> OptimizationResult:
+    return OptimizationResult(
+        run_id="test-run-id",
+        solver="cpsat",
+        objective=1234.56,
+        schedule=schedule,
+        monthly_kpis=monthly_kpis,
+        status="success",
+    )
 
-request = OptimizationRequest(**payload)
 
-service = OptimizationService()
-result = service.optimize_schedule(request)
+def _kpi(month: int, rentals: float, downtime: float, worst: float) -> MonthlyKPI:
+    return MonthlyKPI(
+        month=month,
+        expected_rentals=rentals,
+        expected_downtime=downtime,
+        worst_case_downtime=worst,
+    )
 
-analyzer = RunAnalyzer()
-analysis = analyzer.analyze_result(
-    result=result,
-    max_rentals_per_month=request.max_rentals_per_month,
-)
 
-print(analysis.model_dump())
+@pytest.fixture
+def analyzer():
+    return RunAnalyzer()
+
+
+class TestAnalyzeResultEngineCounts:
+
+    def test_maintained_engines_identified(self, analyzer):
+        result = _make_result(
+            schedule={"E01": 3, "E02": 0, "E03": 7, "E04": 0},
+            monthly_kpis=[],
+        )
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert set(analysis.schedule_summary.maintained_engines) == {"E01", "E03"}
+
+    def test_unmaintained_engines_identified(self, analyzer):
+        result = _make_result(
+            schedule={"E01": 3, "E02": 0, "E03": 7, "E04": 0},
+            monthly_kpis=[],
+        )
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert set(analysis.schedule_summary.unmaintained_engines) == {"E02", "E04"}
+
+    def test_n_engines_total(self, analyzer):
+        result = _make_result(
+            schedule={"E01": 1, "E02": 2, "E03": 0},
+            monthly_kpis=[],
+        )
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.n_engines == 3
+        assert analysis.summary.n_maintained_engines == 2
+        assert analysis.summary.n_unmaintained_engines == 1
+
+    def test_all_maintained(self, analyzer):
+        result = _make_result(
+            schedule={"E01": 1, "E02": 2},
+            monthly_kpis=[],
+        )
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.n_unmaintained_engines == 0
+
+    def test_none_maintained(self, analyzer):
+        result = _make_result(
+            schedule={"E01": 0, "E02": 0},
+            monthly_kpis=[],
+        )
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.n_maintained_engines == 0
+
+
+class TestAnalyzeResultShopDistribution:
+
+    def test_shop_month_distribution(self, analyzer):
+        result = _make_result(
+            schedule={"E01": 3, "E02": 3, "E03": 7, "E04": 0},
+            monthly_kpis=[],
+        )
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        dist = analysis.schedule_summary.shop_month_distribution
+        assert dist[3] == 2
+        assert dist[7] == 1
+        assert dist[0] == 1
+
+
+class TestAnalyzeResultKPIAggregation:
+
+    def test_avg_expected_rentals(self, analyzer):
+        kpis = [_kpi(1, 2.0, 0.0, 0.0), _kpi(2, 4.0, 0.0, 0.0)]
+        result = _make_result(schedule={"E01": 1}, monthly_kpis=kpis)
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.avg_expected_rentals == pytest.approx(3.0)
+
+    def test_avg_expected_downtime(self, analyzer):
+        kpis = [_kpi(1, 0.0, 1.0, 1.0), _kpi(2, 0.0, 3.0, 3.0)]
+        result = _make_result(schedule={"E01": 1}, monthly_kpis=kpis)
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.avg_expected_downtime == pytest.approx(2.0)
+
+    def test_worst_case_downtime(self, analyzer):
+        kpis = [_kpi(1, 0.0, 1.0, 2.0), _kpi(2, 0.0, 0.5, 5.0), _kpi(3, 0.0, 0.0, 0.0)]
+        result = _make_result(schedule={"E01": 1}, monthly_kpis=kpis)
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.worst_case_downtime == pytest.approx(5.0)
+
+    def test_n_months_with_downtime_risk(self, analyzer):
+        kpis = [_kpi(1, 0.0, 1.0, 1.0), _kpi(2, 0.0, 0.0, 0.0), _kpi(3, 0.0, 0.5, 1.0)]
+        result = _make_result(schedule={"E01": 1}, monthly_kpis=kpis)
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.n_months_with_downtime_risk == 2
+
+    def test_n_months_hitting_rental_cap(self, analyzer):
+        # cap is 4
+        kpis = [_kpi(1, 4.0, 0.0, 0.0), _kpi(2, 3.9, 0.0, 0.0), _kpi(3, 5.0, 0.0, 0.0)]
+        result = _make_result(schedule={"E01": 1}, monthly_kpis=kpis)
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.n_months_hitting_rental_cap == 2
+
+    def test_empty_kpis_return_zeros(self, analyzer):
+        result = _make_result(schedule={"E01": 1}, monthly_kpis=[])
+        analysis = analyzer.analyze_result(result, max_rentals_per_month=4)
+        assert analysis.summary.avg_expected_rentals == 0.0
+        assert analysis.summary.avg_expected_downtime == 0.0
+        assert analysis.summary.worst_case_downtime == 0.0
+        assert analysis.summary.n_months_with_downtime_risk == 0
+        assert analysis.summary.n_months_hitting_rental_cap == 0

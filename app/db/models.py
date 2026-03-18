@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, UTC
 
 from sqlmodel import SQLModel, Field
 
@@ -11,7 +11,7 @@ class OptimizationRun(SQLModel, table=True):
     objective: float
     status: str
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     horizon_months: int
     n_engines: int

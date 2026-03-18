@@ -1,47 +1,80 @@
-import sys
-from pathlib import Path
+"""
+Unit tests for the Pydantic request/response schemas.
+"""
+from __future__ import annotations
 
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+import pytest
+from pydantic import ValidationError
 
-from app.schemas.optimization import OptimizationRequest
-payload = {
-    "engines": [
-        {
-            "engine_id": "E01",
-            "age_months": 24,
-            "distance_km": 420000,
-            "health": 0.72,
-        },
-        {
-            "engine_id": "E02",
-            "age_months": 30,
-            "distance_km": 510000,
-            "health": 0.55,
-        },
-    ],
-    "horizon_months": 12,
-    "shop_capacity": [2] * 12,
-    "shop_duration_months": 2,
-    "spares": 1,
-    "h_min": 0.2,
-    "max_rentals_per_month": 4,
-    "base_maint_cost": 300000,
-    "rental_cost": 50000,
-    "downtime_cost": 2000000,
-    "gamma_health_cost": 1.5,
-    "terminal_inop_cost": 100000,
-    "terminal_shortfall_cost": 100000,
-    "terminal_health_target": 0.6,
-    "km_per_month": 25000,
-    "mu_base": 0.01,
-    "mu_per_1000km": 0.00025,
-    "sigma": 0.004,
-    "window_length": 6,
-    "commit_length": 2,
-}
+from app.schemas.optimization import OptimizationRequest, OptimizationSettings
 
-request = OptimizationRequest(**payload)
 
-print(request)
-print()
-print(request.model_dump())
+class TestOptimizationRequestValidation:
+
+    def test_valid_payload_parses(self, sample_payload):
+        req = OptimizationRequest(**sample_payload)
+        assert len(req.engines) == 4
+        assert req.horizon_months == 12
+        assert req.settings.solver == "cpsat"
+
+    def test_default_settings_applied_when_omitted(self, sample_payload):
+        del sample_payload["settings"]
+        req = OptimizationRequest(**sample_payload)
+        assert req.settings.solver == "cpsat"
+        assert req.settings.n_scenarios == 30
+        assert req.settings.random_seed == 123
+        assert req.settings.time_limit_s == 10.0
+
+    def test_shop_capacity_preserved(self, sample_payload):
+        req = OptimizationRequest(**sample_payload)
+        assert req.shop_capacity == [2] * 12
+
+    def test_health_above_one_rejected(self, sample_payload):
+        sample_payload["engines"][0]["health"] = 1.5
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_health_below_zero_rejected(self, sample_payload):
+        sample_payload["engines"][0]["health"] = -0.1
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_negative_age_rejected(self, sample_payload):
+        sample_payload["engines"][0]["age_months"] = -1
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_negative_distance_rejected(self, sample_payload):
+        sample_payload["engines"][0]["distance_km"] = -100
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_extra_fields_rejected(self, sample_payload):
+        sample_payload["unexpected_field"] = "should_fail"
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_missing_required_horizon_rejected(self, sample_payload):
+        del sample_payload["horizon_months"]
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_missing_engines_rejected(self, sample_payload):
+        del sample_payload["engines"]
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_horizon_months_zero_rejected(self, sample_payload):
+        sample_payload["horizon_months"] = 0
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
+
+    def test_spares_zero_accepted(self, sample_payload):
+        sample_payload["spares"] = 0
+        req = OptimizationRequest(**sample_payload)
+        assert req.spares == 0
+
+    def test_unsupported_solver_rejected(self, sample_payload):
+        sample_payload["settings"]["solver"] = "magic_solver"
+        with pytest.raises(ValidationError):
+            OptimizationRequest(**sample_payload)
