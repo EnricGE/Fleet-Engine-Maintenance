@@ -23,10 +23,22 @@ st.set_page_config(
 client = FleetAPIClient(API_BASE)
 
 _DEFAULT_ENGINES = pd.DataFrame([
-    {"engine_id": "E01", "age_months": 24, "distance_km": 420_000, "health": 0.72},
-    {"engine_id": "E02", "age_months": 30, "distance_km": 510_000, "health": 0.55},
-    {"engine_id": "E03", "age_months": 18, "distance_km": 300_000, "health": 0.66},
-    {"engine_id": "E04", "age_months": 40, "distance_km": 700_000, "health": 0.30},
+    {"engine_id": "E01", "age_months": 18, "distance_km": 250_000, "health": 0.90},
+    {"engine_id": "E02", "age_months": 36, "distance_km": 520_000, "health": 0.55},
+    {"engine_id": "E03", "age_months": 10, "distance_km": 120_000, "health": 0.75},
+    {"engine_id": "E04", "age_months": 44, "distance_km": 700_000, "health": 0.35},
+    {"engine_id": "E05", "age_months": 18, "distance_km": 250_000, "health": 0.90},
+    {"engine_id": "E06", "age_months": 36, "distance_km": 520_000, "health": 0.55},
+    {"engine_id": "E07", "age_months": 10, "distance_km": 120_000, "health": 0.75},
+    {"engine_id": "E08", "age_months": 44, "distance_km": 700_000, "health": 0.35},
+    {"engine_id": "E09", "age_months": 18, "distance_km": 250_000, "health": 0.90},
+    {"engine_id": "E10", "age_months": 36, "distance_km": 520_000, "health": 0.55},
+    {"engine_id": "E11", "age_months": 10, "distance_km": 120_000, "health": 0.75},
+    {"engine_id": "E12", "age_months": 44, "distance_km": 700_000, "health": 0.35},
+    {"engine_id": "E13", "age_months": 18, "distance_km": 250_000, "health": 0.90},
+    {"engine_id": "E14", "age_months": 36, "distance_km": 520_000, "health": 0.55},
+    {"engine_id": "E15", "age_months": 10, "distance_km": 120_000, "health": 0.75},
+    {"engine_id": "E16", "age_months": 44, "distance_km": 700_000, "health": 0.35},
 ])
 
 # ── Session state ─────────────────────────────────────────────────────────────
@@ -204,26 +216,26 @@ def page_run_optimisation() -> None:
             horizon_months = st.number_input("Horizon (months)", min_value=1, max_value=36, value=12, step=1)
             shop_capacity_str = st.text_input(
                 "Shop capacity / month (comma-separated)",
-                value=",".join(["2"] * int(horizon_months)),
+                value="2,1,2,2,2,2,3,3,2,2,2,2",
             )
             shop_duration = st.number_input("Shop duration (months)", min_value=1, max_value=6, value=2, step=1)
-            spares = st.number_input("Spare engines", min_value=0, max_value=10, value=1, step=1)
+            spares = st.number_input("Spare engines", min_value=0, max_value=10, value=2, step=1)
             max_rentals = st.number_input("Max rentals / month", min_value=0, max_value=20, value=4, step=1)
-            h_min = st.slider("Min health threshold (h_min)", 0.0, 1.0, 0.20, step=0.05)
+            h_min = st.slider("Min health threshold (h_min)", 0.0, 1.0, 0.25, step=0.05)
 
         with st.expander("Costs"):
-            base_maint_cost = st.number_input("Base maintenance cost ($)", min_value=0, max_value=10_000_000, value=300_000, step=10_000)
-            rental_cost = st.number_input("Rental cost ($/month)", min_value=0, max_value=1_000_000, value=50_000, step=5_000)
+            base_maint_cost = st.number_input("Base maintenance cost ($)", min_value=0, max_value=10_000_000, value=12_000, step=1_000)
+            rental_cost = st.number_input("Rental cost ($/month)", min_value=0, max_value=1_000_000, value=45_000, step=5_000)
             downtime_cost = st.number_input("Downtime cost ($/month)", min_value=0, max_value=10_000_000, value=2_000_000, step=100_000)
-            gamma_health_cost = st.number_input("Health degradation multiplier (γ)", min_value=0.0, max_value=10.0, value=1.5, step=0.1)
-            terminal_inop_cost = st.number_input("Terminal inop cost ($)", min_value=0, max_value=5_000_000, value=100_000, step=10_000)
+            gamma_health_cost = st.number_input("Health degradation multiplier (γ)", min_value=0.0, max_value=10.0, value=1.0, step=0.1)
+            terminal_inop_cost = st.number_input("Terminal inop cost ($)", min_value=0, max_value=5_000_000, value=50_000, step=10_000)
             terminal_shortfall_cost = st.number_input("Terminal shortfall cost ($)", min_value=0, max_value=5_000_000, value=100_000, step=10_000)
 
         with st.expander("Deterioration"):
-            km_per_month = st.number_input("Distance / month (km)", min_value=0, max_value=200_000, value=25_000, step=1_000)
+            km_per_month = st.number_input("Distance / month (km)", min_value=0, max_value=1000_000, value=250_000, step=1_000)
             mu_base = st.number_input("μ base", min_value=0.0, max_value=0.1, value=0.01, step=0.001, format="%.4f")
             mu_per_1000km = st.number_input("μ per 1000 km", min_value=0.0, max_value=0.01, value=0.00025, step=0.00005, format="%.5f")
-            sigma = st.number_input("σ (noise)", min_value=0.0, max_value=0.05, value=0.004, step=0.001, format="%.4f")
+            sigma = st.number_input("σ (noise)", min_value=0.0, max_value=0.05, value=0.005, step=0.001, format="%.4f")
 
         with st.expander("Solver"):
             solver = st.selectbox("Solver", ["cpsat"])
