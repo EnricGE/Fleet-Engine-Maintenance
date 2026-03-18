@@ -130,7 +130,7 @@ class OptimizationService:
             session.commit()
 
         return OptimizationResult(
-            run_id=str(uuid4()),
+            run_id=run_id,
             solver=request.settings.solver,
             objective=result.objective,
             schedule=result.schedule,
