@@ -7,16 +7,7 @@ import numpy as np
 from fleet_engine_planning.domain.engine import Fleet
 from fleet_engine_planning.preprocessing.schema import CostParams
 from fleet_engine_planning.solvers import ScheduleResult
-
-# MEALPY imports (v3.x)
-try:
-    from mealpy import GA, IntegerVar, Problem
-    _MEALPY_V3 = True
-except Exception:
-    # Fallback for older mealpy versions (continuous vars only)
-    from mealpy import GA, FloatVar, Problem  # type: ignore
-    IntegerVar = None  # type: ignore
-    _MEALPY_V3 = False
+from mealpy import GA, IntegerVar, Problem
 
 
 def _capacity_usage(months: np.ndarray, T: int, D: int) -> np.ndarray:
@@ -202,68 +193,38 @@ def solve_ga_mealpy(
     D = int(shop_duration_months)
 
     # --- Define MEALPY Problem ---
-    if _MEALPY_V3:
-        bounds = IntegerVar(lb=[0] * n, ub=[T] * n)
+    bounds = IntegerVar(lb=[0] * n, ub=[T] * n)
 
-        class FleetScheduleProblem(Problem):
-            def __init__(self):
-                super().__init__(bounds=bounds, minmax="min")
+    class FleetScheduleProblem(Problem):
+        def __init__(self):
+            super().__init__(bounds=bounds, minmax="min")
 
-            def generate_position(self):
-                x = rng.integers(low=0, high=T + 1, size=n, dtype=int)
-                x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
-                return x
+        def generate_position(self):
+            x = rng.integers(low=0, high=T + 1, size=n, dtype=int)
+            x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
+            return x
 
-            def amend_position(self, solution):
-                # MEALPY may pass numpy float; force int and repair
-                x = np.rint(solution).astype(int)
-                x = np.clip(x, 0, T)
-                x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
-                return x
+        def amend_position(self, solution):
+            # MEALPY may pass numpy float; force int and repair
+            x = np.rint(solution).astype(int)
+            x = np.clip(x, 0, T)
+            x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
+            return x
 
-            def obj_func(self, solution):
-                x = self.amend_position(solution)
-                total, _, _ = _evaluate_schedule(
-                    engine_ids=engine_ids,
-                    months=x,
-                    T=T,
-                    S=S,
-                    n_required=n_required,
-                    costs=costs,
-                    operable=operable,
-                    expected_shop_cost=expected_shop_cost,
-                    max_rentals_per_month=max_rentals_per_month,
-                )
-                return total
-
-    else:
-        # Older MEALPY fallback: FloatVar + round-to-int inside obj/repair
-        bounds = FloatVar(lb=[0.0] * n, ub=[float(T)] * n)
-
-        class FleetScheduleProblem(Problem):
-            def __init__(self):
-                super().__init__(bounds=bounds, minmax="min")
-
-            def amend_position(self, solution):
-                x = np.rint(solution).astype(int)
-                x = np.clip(x, 0, T)
-                x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
-                return x
-
-            def obj_func(self, solution):
-                x = self.amend_position(solution)
-                total, _, _ = _evaluate_schedule(
-                    engine_ids=engine_ids,
-                    months=x,
-                    T=T,
-                    S=S,
-                    n_required=n_required,
-                    costs=costs,
-                    operable=operable,
-                    expected_shop_cost=expected_shop_cost,
-                    max_rentals_per_month=max_rentals_per_month,
-                )
-                return total
+        def obj_func(self, solution):
+            x = self.amend_position(solution)
+            total, _, _ = _evaluate_schedule(
+                engine_ids=engine_ids,
+                months=x,
+                T=T,
+                S=S,
+                n_required=n_required,
+                costs=costs,
+                operable=operable,
+                expected_shop_cost=expected_shop_cost,
+                max_rentals_per_month=max_rentals_per_month,
+            )
+            return total
 
     problem = FleetScheduleProblem()
 
