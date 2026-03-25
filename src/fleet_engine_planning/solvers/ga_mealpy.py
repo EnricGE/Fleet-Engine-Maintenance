@@ -31,6 +31,7 @@ def _repair_capacity_with_duration(
     T: int,
     D: int,
     rng: np.random.Generator,
+    engine_health: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """
     Repair a schedule vector months[i] in {0..T} so that for each month t:
@@ -40,6 +41,8 @@ def _repair_capacity_with_duration(
     Strategy:
       While any month overloaded:
         - pick an engine that contributes to an overloaded month
+          (prefer the healthiest engine when health scores are provided,
+          since deferring a healthy engine to m=0 costs less in downtime)
         - move its shop start to a feasible month (nearest with slack), otherwise set to 0
     """
     months = months.astype(int).copy()
@@ -65,7 +68,11 @@ def _repair_capacity_with_duration(
             # shouldn't happen, but break safely
             return months
 
-        i = int(rng.choice(idx))
+        # Prefer to move the healthiest engine — safe to defer without incurring downtime
+        if engine_health is not None:
+            i = idx[int(np.argmax(engine_health[idx]))]
+        else:
+            i = int(rng.choice(idx))
         m_old = int(months[i])
 
         # try to relocate start month
@@ -187,6 +194,7 @@ def solve_ga_mealpy(
         raise ValueError("shop_capacity length must equal horizon_months")
 
     engine_ids = [e.engine_id for e in fleet.engines]
+    engine_health = np.array([e.health for e in fleet.engines], dtype=float)
     n = len(engine_ids)
     rng = np.random.default_rng(seed)
 
@@ -201,14 +209,14 @@ def solve_ga_mealpy(
 
         def generate_position(self):
             x = rng.integers(low=0, high=T + 1, size=n, dtype=int)
-            x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
+            x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng, engine_health)
             return x
 
         def amend_position(self, solution):
             # MEALPY may pass numpy float; force int and repair
             x = np.rint(solution).astype(int)
             x = np.clip(x, 0, T)
-            x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng)
+            x = _repair_capacity_with_duration(x, shop_capacity, T, D, rng, engine_health)
             return x
 
         def obj_func(self, solution):
