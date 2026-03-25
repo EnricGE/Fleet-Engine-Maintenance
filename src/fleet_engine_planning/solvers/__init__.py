@@ -10,3 +10,4 @@ class ScheduleResult:
     objective: float
     rentals: Dict[Tuple[int, int], int]   # (month, scenario) -> rentals
     downtime: Dict[Tuple[int, int], int]  # (month, scenario) -> downtime
+    solver_status: str = "unknown"        # "optimal", "feasible", or "unknown"

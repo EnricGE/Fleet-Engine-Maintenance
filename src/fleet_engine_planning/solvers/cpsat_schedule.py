@@ -143,5 +143,6 @@ def solve_cpsat_schedule_with_rentals(
     downtime = {(t, s): int(solver.Value(d[(t, s)])) for t in range(1, T + 1) for s in range(S)}
 
     objective = solver.ObjectiveValue() / SCALE
-    
-    return ScheduleResult(schedule=schedule, objective=objective, rentals=rentals, downtime=downtime)
+    solver_status = "optimal" if status == cp_model.OPTIMAL else "feasible"
+
+    return ScheduleResult(schedule=schedule, objective=objective, rentals=rentals, downtime=downtime, solver_status=solver_status)

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from collections import Counter
 
+import numpy as np
+
 from fleet_engine_planning.preprocessing.loaders import load_scenario
 from fleet_engine_planning.simulation.deterioration import sample_deterioration_deltas
 from fleet_engine_planning.optimization.precompute import build_operability_tensor, build_expected_shop_costs
 from fleet_engine_planning.solvers.cpsat_schedule import solve_cpsat_schedule_with_rentals
-from fleet_engine_planning.solvers.ga_mealpy import solve_ga_mealpy
+from fleet_engine_planning.solvers.ga_mealpy import solve_ga_mealpy, _evaluate_schedule
 
 
 def _month_hist(schedule: dict[str, int], horizon: int) -> dict[int, int]:
@@ -27,9 +29,10 @@ def main() -> None:
     print()
 
     # Shared stochastic scenarios (same dh -> fair comparison)
+    # T+1 so the operability tensor includes the terminal month used by CP-SAT
     dh = sample_deterioration_deltas(
         fleet=scenario.fleet,
-        horizon_months=T,
+        horizon_months=T + 1,
         n_scenarios=S,
         params=scenario.deterioration,
         seed=seed,
@@ -64,7 +67,7 @@ def main() -> None:
         costs=scenario.costs,
         operable=oper,
         expected_shop_cost=c_shop,
-        time_limit_s=10.0,
+        time_limit_s=60.0,
     )
 
     # --- GA (MEALPY) ---
@@ -86,21 +89,45 @@ def main() -> None:
         pm=0.2,
     )
 
+    # --- Re-evaluate both schedules on the same objective for a fair comparison ---
+    # CP-SAT's native objective includes terminal penalty + integer rounding.
+    # GA's native objective excludes terminal penalty.
+    # Re-evaluating both with _evaluate_schedule gives apples-to-apples numbers.
+    engine_ids = [e.engine_id for e in scenario.fleet.engines]
+
+    def reeval(schedule: dict[str, int]) -> float:
+        months = np.array([schedule[eid] for eid in engine_ids])
+        obj, _, _ = _evaluate_schedule(
+            engine_ids=engine_ids,
+            months=months,
+            T=T,
+            S=S,
+            n_required=n_required,
+            costs=scenario.costs,
+            operable=oper,
+            expected_shop_cost=c_shop,
+            max_rentals_per_month=scenario.max_rentals_per_month,
+        )
+        return obj
+
     # --- Print summary ---
     print("=== RESULTS ===")
     if cpsat is None:
         print("CP-SAT: No feasible solution")
     else:
-        print(f"CP-SAT objective: {cpsat.objective:.2f}")
+        cpsat_fair = reeval(cpsat.schedule)
+        print(f"CP-SAT native objective: {cpsat.objective:.2f}  (includes terminal penalty)")
+        print(f"CP-SAT fair objective:   {cpsat_fair:.2f}  [{cpsat.solver_status.upper()}]")
 
     if ga is None:
         print("GA: No solution returned")
     else:
-        print(f"GA objective:     {ga.objective:.2f}")
+        ga_fair = reeval(ga.schedule)
+        print(f"GA fair objective:       {ga_fair:.2f}")
 
     if cpsat is not None and ga is not None:
-        gap = (ga.objective - cpsat.objective) / cpsat.objective * 100
-        print(f"GA optimality gap: {gap:+.2f}%")
+        gap = (ga_fair - cpsat_fair) / cpsat_fair * 100
+        print(f"GA optimality gap (fair): {gap:+.2f}%")
 
     print()
 
