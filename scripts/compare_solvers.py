@@ -98,6 +98,10 @@ def main() -> None:
     else:
         print(f"GA objective:     {ga.objective:.2f}")
 
+    if cpsat is not None and ga is not None:
+        gap = (ga.objective - cpsat.objective) / cpsat.objective * 100
+        print(f"GA optimality gap: {gap:+.2f}%")
+
     print()
 
     # Capacity sanity check
