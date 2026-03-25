@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -18,11 +20,19 @@ from app.repositories.run_repository import RunRepository
 
 from app.db.database import create_db_and_tables
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     create_db_and_tables()
+    logger.info("Database ready")
     yield
     # Shutdown (nothing yet)
 
@@ -45,12 +55,32 @@ def health_check() -> dict[str, str]:
 
 @app.post("/optimize_schedule", response_model=OptimizationResult)
 def optimize_schedule(request: OptimizationRequest) -> OptimizationResult:
+    logger.info(
+        "Optimization request received — engines=%d horizon=%d solver=%s scenarios=%d",
+        len(request.engines),
+        request.horizon_months,
+        request.settings.solver,
+        request.settings.n_scenarios,
+    )
+    t0 = time.perf_counter()
     try:
-        return service.optimize_schedule(request)
+        result = service.optimize_schedule(request)
+        elapsed = time.perf_counter() - t0
+        logger.info(
+            "Optimization complete — run_id=%s status=%s objective=%.2f elapsed=%.2fs",
+            result.run_id,
+            result.status,
+            result.objective,
+            elapsed,
+        )
+        return result
     except NotImplementedError as exc:
+        logger.warning("Unsupported solver requested: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Optimization failed: {exc}") from exc
+        elapsed = time.perf_counter() - t0
+        logger.exception("Optimization failed after %.2fs: %s", elapsed, exc)
+        raise HTTPException(status_code=500, detail="Optimization failed") from exc
 
 
 @app.get("/runs", response_model=list[StoredRunOut])

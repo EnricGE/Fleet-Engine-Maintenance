@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+import time
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 from app.schemas.optimization import (
     EngineStateIn,
@@ -49,6 +53,7 @@ class OptimizationService:
         seed = request.settings.random_seed
 
         # Build uncertainty scenarios
+        t0 = time.perf_counter()
         dh = sample_deterioration_deltas(
             fleet=scenario.fleet,
             horizon_months=T + 1,  # +1 for terminal operability
@@ -56,8 +61,10 @@ class OptimizationService:
             params=scenario.deterioration,
             seed=seed,
         )
+        logger.debug("Sampled %d deterioration scenarios in %.3fs", S, time.perf_counter() - t0)
 
         # Precompute operability tensor
+        t0 = time.perf_counter()
         oper = build_operability_tensor(
             fleet=scenario.fleet,
             dh=dh,
@@ -75,9 +82,15 @@ class OptimizationService:
             n_scenarios=S,
             costs=scenario.costs,
         )
+        logger.debug("Precomputed operability tensor and shop costs in %.3fs", time.perf_counter() - t0)
 
         n_required = max(0, len(scenario.fleet.engines) - scenario.spares)
 
+        logger.info(
+            "Starting CP-SAT solver — engines=%d horizon=%d scenarios=%d n_required=%d time_limit=%.1fs",
+            len(scenario.fleet.engines), T, S, n_required, request.settings.time_limit_s,
+        )
+        t0 = time.perf_counter()
         result = solve_cpsat_schedule_with_rentals(
             fleet=scenario.fleet,
             horizon_months=T,
@@ -91,10 +104,13 @@ class OptimizationService:
             expected_shop_cost=c_shop,
             time_limit_s=request.settings.time_limit_s,
         )
+        logger.info("CP-SAT solver finished in %.3fs — %s", time.perf_counter() - t0,
+                    f"objective={result.objective:.2f}" if result else "no solution")
 
         run_id = str(uuid4())
 
         if result is None:
+            logger.warning("No feasible solution found — run_id=%s", run_id)
             return OptimizationResult(
                 run_id=run_id,
                 solver=request.settings.solver,
@@ -128,6 +144,7 @@ class OptimizationService:
             self.repo.save_monthly_kpis(session, run_id, monthly_kpis)
 
             session.commit()
+            logger.debug("Persisted run_id=%s to database", run_id)
 
         return OptimizationResult(
             run_id=run_id,
