@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, List
 
 import numpy as np
 
 from fleet_engine_planning.domain.engine import Fleet
 from fleet_engine_planning.preprocessing.schema import CostParams
+from fleet_engine_planning.solvers import ScheduleResult
 
 # MEALPY imports (v3.x)
 try:
@@ -17,14 +17,6 @@ except Exception:
     from mealpy import GA, FloatVar, Problem  # type: ignore
     IntegerVar = None  # type: ignore
     _MEALPY_V3 = False
-
-
-@dataclass(frozen=True)
-class ScheduleResult:
-    schedule: Dict[str, int]                # engine_id -> shop_month (0..T)
-    objective: float
-    rentals: Dict[Tuple[int, int], int]
-    downtime: Dict[Tuple[int, int], int]
 
 
 def _capacity_usage(months: np.ndarray, T: int, D: int) -> np.ndarray:
@@ -269,6 +261,7 @@ def solve_ga_mealpy(
                     costs=costs,
                     operable=operable,
                     expected_shop_cost=expected_shop_cost,
+                    max_rentals_per_month=max_rentals_per_month,
                 )
                 return total
 

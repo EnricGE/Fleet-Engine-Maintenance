@@ -4,7 +4,7 @@ from collections import Counter
 
 from fleet_engine_planning.preprocessing.loaders import load_scenario
 from fleet_engine_planning.simulation.deterioration import sample_deterioration_deltas
-from fleet_engine_planning.optimizer.precompute import build_operability_tensor, build_expected_shop_costs
+from fleet_engine_planning.optimization.precompute import build_operability_tensor, build_expected_shop_costs
 from fleet_engine_planning.solvers.cpsat_schedule import solve_cpsat_schedule_with_rentals
 from fleet_engine_planning.solvers.ga_mealpy import solve_ga_mealpy
 

@@ -1,20 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Dict, Tuple, Optional
 
 from ortools.sat.python import cp_model
 
 from fleet_engine_planning.domain.engine import Fleet
 from fleet_engine_planning.preprocessing.schema import CostParams
-
-
-@dataclass(frozen=True)
-class ScheduleResult:
-    schedule: Dict[str, int]  # engine_id -> shop_month (0..T)
-    objective: float
-    rentals: Dict[Tuple[int, int], int]   # (month, scenario) -> rentals
-    downtime: Dict[Tuple[int, int], int]  # (month, scenario) -> downtime
+from fleet_engine_planning.solvers import ScheduleResult
 
 
 def solve_cpsat_schedule_with_rentals(
