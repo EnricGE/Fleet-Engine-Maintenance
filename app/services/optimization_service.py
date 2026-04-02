@@ -141,6 +141,7 @@ class OptimizationService:
             )
 
             self.repo.save_run(session, run)
+            session.flush()  # write run_id to DB before FK-constrained children
             self.repo.save_schedule(session, run_id, result.schedule)
             self.repo.save_monthly_kpis(session, run_id, monthly_kpis)
 

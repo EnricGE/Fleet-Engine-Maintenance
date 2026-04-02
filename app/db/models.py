@@ -21,7 +21,7 @@ class OptimizationRun(SQLModel, table=True):
 class ScheduleEntry(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    run_id: str = Field(index=True)
+    run_id: str = Field(index=True, foreign_key="optimizationrun.run_id")
     engine_id: str
     shop_month: int
 
@@ -29,7 +29,7 @@ class ScheduleEntry(SQLModel, table=True):
 class MonthlyKPIRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    run_id: str = Field(index=True)
+    run_id: str = Field(index=True, foreign_key="optimizationrun.run_id")
     month: int
 
     expected_rentals: float
