@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 from app.schemas.optimization import OptimizationRequest
 from app.services.optimization_service import OptimizationService
 from app.db.models import OptimizationRun
-from fleet_engine_planning.solvers.cpsat_schedule import ScheduleResult
+from fleet_engine_planning.solvers import ScheduleResult
 
 
 # ---------------------------------------------------------------------------
