@@ -137,6 +137,7 @@ class OptimizationService:
                 status="success",
                 horizon_months=request.horizon_months,
                 n_engines=len(request.engines),
+                max_rentals_per_month=request.max_rentals_per_month,
             )
 
             self.repo.save_run(session, run)

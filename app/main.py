@@ -127,7 +127,7 @@ def get_run_summary(run_id: str):
             run,
             schedule_rows,
             monthly_kpi_rows,
-            max_rentals_per_month=4,  # could later come from stored config
+            max_rentals_per_month=run.max_rentals_per_month,
         )
 
         return analysis
