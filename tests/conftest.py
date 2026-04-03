@@ -84,10 +84,8 @@ def test_client(in_memory_engine, monkeypatch):
     def mock_get_session():
         return Session(in_memory_engine)
 
-    # Routes in main.py do:  with Session(engine) as session:
-    monkeypatch.setattr("app.main.engine", in_memory_engine)
-
-    # OptimizationService does:  with get_session() as session:
+    # All routes and OptimizationService use get_session() — one patch covers both
+    monkeypatch.setattr("app.main.get_session", mock_get_session)
     monkeypatch.setattr("app.services.optimization_service.get_session", mock_get_session)
 
     # Prevent lifespan from touching the real file-based DB

@@ -37,8 +37,8 @@ class OptimizationService:
     and the internal optimization core.
     """
 
-    def __init__(self):
-        self.repo = RunRepository()
+    def __init__(self, repo: RunRepository | None = None):
+        self.repo = repo if repo is not None else RunRepository()
 
     def optimize_schedule(self, request: OptimizationRequest) -> OptimizationResult:
         if request.settings.solver != "cpsat":
