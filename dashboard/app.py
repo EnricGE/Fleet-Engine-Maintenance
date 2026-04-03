@@ -342,7 +342,7 @@ def page_run_optimisation() -> None:
 **How it works**
 
 1. **Configure** — edit engines and scenario parameters in the sidebar
-2. **Run** — the CP-SAT solver schedules shop visits to minimise total cost under uncertainty
+2. **Run** — choose a solver: CP-SAT finds the provably optimal schedule; GA is a faster heuristic suited to larger fleets
 3. **Explore** — inspect the Gantt chart, monthly risk profile, and KPI summary
         """)
 
