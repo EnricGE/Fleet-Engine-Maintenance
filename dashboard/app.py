@@ -372,9 +372,10 @@ def page_history() -> None:
     df["run_id_short"] = df["run_id"].str[:8] + "…"
 
     st.dataframe(
-        df[["run_id_short", "solver", "objective_fmt", "status", "created_at", "horizon_months", "n_engines"]].rename(columns={
+        df[["run_id_short", "solver", "solver_status", "objective_fmt", "status", "created_at", "horizon_months", "n_engines"]].rename(columns={
             "run_id_short": "Run ID",
             "solver": "Solver",
+            "solver_status": "Optimality",
             "objective_fmt": "Objective",
             "status": "Status",
             "created_at": "Created",
