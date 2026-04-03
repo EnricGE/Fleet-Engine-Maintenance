@@ -16,6 +16,7 @@ class OptimizationRun(SQLModel, table=True):
     horizon_months: int
     n_engines: int
     max_rentals_per_month: int
+    shop_duration_months: int
 
 
 class ScheduleEntry(SQLModel, table=True):

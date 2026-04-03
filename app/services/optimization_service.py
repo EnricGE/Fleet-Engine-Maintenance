@@ -158,6 +158,7 @@ class OptimizationService:
                 horizon_months=request.horizon_months,
                 n_engines=len(request.engines),
                 max_rentals_per_month=request.max_rentals_per_month,
+                shop_duration_months=request.shop_duration_months,
             )
 
             self.repo.save_run(session, run)

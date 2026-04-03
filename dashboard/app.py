@@ -417,7 +417,7 @@ def page_history() -> None:
             st.warning(f"Engines not scheduled: **{', '.join(ss['unmaintained_engines'])}**")
 
         st.plotly_chart(
-            make_gantt(schedule_dict, run_meta["horizon_months"], 2),
+            make_gantt(schedule_dict, run_meta["horizon_months"], run_meta["shop_duration_months"]),
             use_container_width=True,
         )
 
