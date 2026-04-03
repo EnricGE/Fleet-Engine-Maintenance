@@ -238,10 +238,17 @@ def page_run_optimisation() -> None:
             sigma = st.number_input("σ (noise)", min_value=0.0, max_value=0.05, value=0.005, step=0.001, format="%.4f")
 
         with st.expander("Solver"):
-            solver = st.selectbox("Solver", ["cpsat"])
+            solver = st.selectbox("Solver", ["cpsat", "ga"])
             n_scenarios = st.number_input("Monte Carlo scenarios", min_value=1, max_value=500, value=30, step=10)
             random_seed = st.number_input("Random seed", min_value=0, max_value=9999, value=42)
-            time_limit_s = st.number_input("Time limit (s)", min_value=1.0, max_value=300.0, value=10.0, step=1.0)
+            if solver == "cpsat":
+                time_limit_s = st.number_input("Time limit (s)", min_value=1.0, max_value=300.0, value=10.0, step=1.0)
+                ga_epoch = 300
+                ga_pop_size = 60
+            else:
+                time_limit_s = 10.0
+                ga_epoch = st.number_input("Generations (epoch)", min_value=10, max_value=2000, value=300, step=50)
+                ga_pop_size = st.number_input("Population size", min_value=10, max_value=500, value=60, step=10)
 
         run_clicked = st.button("Run Optimisation", type="primary", use_container_width=True)
 
@@ -295,6 +302,8 @@ def page_run_optimisation() -> None:
                 "n_scenarios": int(n_scenarios),
                 "random_seed": int(random_seed),
                 "time_limit_s": float(time_limit_s),
+                "ga_epoch": int(ga_epoch),
+                "ga_pop_size": int(ga_pop_size),
             },
         }
 
