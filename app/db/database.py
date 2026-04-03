@@ -1,8 +1,10 @@
+import os
+
 from sqlalchemy import event
 from sqlalchemy.engine import Engine as SAEngine
 from sqlmodel import SQLModel, create_engine, Session
 
-DATABASE_URL = "sqlite:///fleet_engine_planning.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///fleet_engine_planning.db")
 
 engine = create_engine(DATABASE_URL, echo=False)
 
