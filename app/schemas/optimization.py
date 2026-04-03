@@ -85,5 +85,6 @@ class OptimizationResult(BaseModel):
     schedule: dict[str, int]
     monthly_kpis: list[MonthlyKPI]
     status: str = "success"
+    solver_status: str = "unknown"
 
 

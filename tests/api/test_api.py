@@ -35,6 +35,10 @@ class TestOptimizeScheduleEndpoint:
         data = test_client.post("/optimize_schedule", json=sample_payload).json()
         assert data["status"] == "success"
 
+    def test_optimize_returns_solver_status(self, test_client, sample_payload):
+        data = test_client.post("/optimize_schedule", json=sample_payload).json()
+        assert data["solver_status"] in {"optimal", "feasible", "unknown"}
+
     def test_optimize_returns_schedule(self, test_client, sample_payload):
         data = test_client.post("/optimize_schedule", json=sample_payload).json()
         assert isinstance(data["schedule"], dict)

@@ -118,6 +118,7 @@ class OptimizationService:
                 schedule={},
                 monthly_kpis=[],
                 status="no_solution",
+                solver_status="unknown",
             )
 
         # Build Monthly KPIs
@@ -155,6 +156,7 @@ class OptimizationService:
             schedule=result.schedule,
             monthly_kpis=monthly_kpis,
             status="success",
+            solver_status=result.solver_status,
         )
 
     def _build_scenario_from_request(self, request: OptimizationRequest) -> Scenario:
