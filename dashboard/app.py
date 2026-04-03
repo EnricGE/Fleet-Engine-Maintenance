@@ -198,6 +198,10 @@ def render_results(result: dict, summary: dict, shop_duration: int) -> None:
 def page_run_optimisation() -> None:
     st.title("Fleet Engine Maintenance Optimisation")
 
+    if not client.health():
+        st.error(f"Cannot reach the API at `{API_BASE}`. Make sure the server is running.")
+        return
+
     with st.sidebar:
         st.subheader("Fleet")
         engines_df = st.data_editor(
