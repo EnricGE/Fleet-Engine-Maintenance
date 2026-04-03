@@ -38,5 +38,8 @@ class FleetAPIClient:
     def get_schedule(self, run_id: str) -> list[dict]:
         return self._get(f"/runs/{run_id}/schedule")  # type: ignore[return-value]
 
+    def get_kpis(self, run_id: str) -> list[dict]:
+        return self._get(f"/runs/{run_id}/kpis")  # type: ignore[return-value]
+
     def get_summary(self, run_id: str) -> dict:
         return self._get(f"/runs/{run_id}/summary")  # type: ignore[return-value]

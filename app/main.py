@@ -10,7 +10,7 @@ from app.db.models import OptimizationRun
 
 from app.schemas.optimization import OptimizationRequest, OptimizationResult
 from app.schemas.run_analysis import RunAnalysisResult
-from app.schemas.run_storage import StoredRunOut, ScheduleEntryOut
+from app.schemas.run_storage import StoredRunOut, ScheduleEntryOut, MonthlyKPIOut
 
 from app.services.optimization_service import OptimizationService
 from app.analyzers.run_analyzer import RunAnalyzer
@@ -106,6 +106,15 @@ def get_run_schedule(run_id: str):
             raise HTTPException(status_code=404, detail="Run not found")
 
         return repo.get_schedule(session, run_id)
+
+
+@app.get("/runs/{run_id}/kpis", response_model=list[MonthlyKPIOut])
+def get_run_kpis(run_id: str):
+    with get_session() as session:
+        run = repo.get_run(session, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="Run not found")
+        return repo.get_monthly_kpis(session, run_id)
 
 
 @app.get("/runs/{run_id}/summary", response_model=RunAnalysisResult)

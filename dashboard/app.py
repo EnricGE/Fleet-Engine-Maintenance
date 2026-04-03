@@ -396,7 +396,7 @@ def page_history() -> None:
         with st.spinner("Loading run details…"):
             try:
                 schedule_entries = client.get_schedule(run_id)
-                schedule_dict = {e["engine_id"]: e["shop_month"] for e in schedule_entries}
+                kpis = client.get_kpis(run_id)
                 summary = client.get_summary(run_id)
                 run_meta = client.get_run(run_id)
             except Exception as e:
@@ -404,53 +404,14 @@ def page_history() -> None:
                 return
 
         st.divider()
-        s = summary["summary"]
-        ss = summary["schedule_summary"]
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Objective", f"${s['objective']:,.0f}")
-        c2.metric("Solver", run_meta["solver"].upper())
-        c3.metric("Maintained", f"{s['n_maintained_engines']} / {s['n_engines']}")
-        c4.metric("Worst-case downtime", f"{s['worst_case_downtime']:.2f}")
-
-        if ss["unmaintained_engines"]:
-            st.warning(f"Engines not scheduled: **{', '.join(ss['unmaintained_engines'])}**")
-
-        st.plotly_chart(
-            make_gantt(schedule_dict, run_meta["horizon_months"], run_meta["shop_duration_months"]),
-            use_container_width=True,
-        )
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.subheader("Shop month distribution")
-            dist = {
-                f"Month {k}": v
-                for k, v in sorted(ss["shop_month_distribution"].items(), key=lambda x: int(x[0]))
-            }
-            st.bar_chart(dist)
-        with col_b:
-            st.subheader("Risk summary")
-            st.dataframe(
-                pd.DataFrame({
-                    "Metric": [
-                        "Avg rentals / month",
-                        "Avg downtime / month",
-                        "Months hitting rental cap",
-                        "Months with downtime risk",
-                    ],
-                    "Value": [
-                        f"{s['avg_expected_rentals']:.2f}",
-                        f"{s['avg_expected_downtime']:.2f}",
-                        s["n_months_hitting_rental_cap"],
-                        s["n_months_with_downtime_risk"],
-                    ],
-                }),
-                hide_index=True,
-                use_container_width=True,
-            )
-
-        st.caption(f"Full run ID: `{run_id}`")
+        result_for_render = {
+            "run_id": run_id,
+            "solver": run_meta["solver"],
+            "solver_status": run_meta.get("solver_status", "unknown"),
+            "schedule": {e["engine_id"]: e["shop_month"] for e in schedule_entries},
+            "monthly_kpis": kpis,
+        }
+        render_results(result_for_render, summary, run_meta["shop_duration_months"])
 
 
 # ── Router ────────────────────────────────────────────────────────────────────

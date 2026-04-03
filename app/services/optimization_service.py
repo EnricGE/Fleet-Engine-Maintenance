@@ -153,6 +153,7 @@ class OptimizationService:
             run = OptimizationRun(
                 run_id=run_id,
                 solver=request.settings.solver,
+                solver_status=result.solver_status,
                 objective=result.objective,
                 status="success",
                 horizon_months=request.horizon_months,

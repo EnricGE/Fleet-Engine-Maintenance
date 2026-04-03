@@ -8,6 +8,7 @@ class OptimizationRun(SQLModel, table=True):
     run_id: str = Field(primary_key=True)
 
     solver: str
+    solver_status: str
     objective: float
     status: str
 
