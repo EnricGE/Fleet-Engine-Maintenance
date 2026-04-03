@@ -147,7 +147,7 @@ def render_results(result: dict, summary: dict, shop_duration: int) -> None:
 
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Objective", f"${s['objective']:,.0f}")
-    c2.metric("Solver", result["solver"].upper())
+    c2.metric("Solver", result["solver"].upper(), delta=result.get("solver_status", "unknown"), delta_color="off")
     c3.metric("Maintained", f"{s['n_maintained_engines']} / {s['n_engines']}")
     c4.metric("Avg downtime risk", f"{s['avg_expected_downtime']:.2f}")
     c5.metric("Worst-case downtime", f"{s['worst_case_downtime']:.2f}")
