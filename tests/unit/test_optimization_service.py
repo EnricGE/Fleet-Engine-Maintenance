@@ -157,10 +157,47 @@ class TestNoSolutionResult:
         assert run is None, "A no_solution run should not be persisted"
 
 
+class TestGASolver:
+
+    def test_ga_status_is_success(self, service, request_obj, sample_payload):
+        ga_payload = {**sample_payload, "settings": {**sample_payload["settings"], "solver": "ga"}}
+        ga_request = OptimizationRequest(**ga_payload)
+        with patch(
+            "app.services.optimization_service.solve_ga_mealpy",
+            return_value=_fake_schedule_result(),
+        ):
+            result = service.optimize_schedule(ga_request)
+        assert result.status == "success"
+
+    def test_ga_schedule_is_populated(self, service, sample_payload):
+        ga_payload = {**sample_payload, "settings": {**sample_payload["settings"], "solver": "ga"}}
+        ga_request = OptimizationRequest(**ga_payload)
+        with patch(
+            "app.services.optimization_service.solve_ga_mealpy",
+            return_value=_fake_schedule_result(),
+        ):
+            result = service.optimize_schedule(ga_request)
+        assert isinstance(result.schedule, dict)
+        assert len(result.schedule) > 0
+
+    def test_ga_run_id_saved_in_db(self, service, sample_payload, in_memory_engine):
+        ga_payload = {**sample_payload, "settings": {**sample_payload["settings"], "solver": "ga"}}
+        ga_request = OptimizationRequest(**ga_payload)
+        with patch(
+            "app.services.optimization_service.solve_ga_mealpy",
+            return_value=_fake_schedule_result(),
+        ):
+            result = service.optimize_schedule(ga_request)
+        with Session(in_memory_engine) as session:
+            run = session.get(OptimizationRun, result.run_id)
+        assert run is not None
+        assert run.solver == "ga"
+
+
 class TestUnsupportedSolver:
 
     def test_unsupported_solver_raises_not_implemented(self, service, sample_payload):
-        sample_payload["settings"]["solver"] = "ga"
+        sample_payload["settings"]["solver"] = "rolling_cpsat"
         request = OptimizationRequest(**sample_payload)
         with pytest.raises(NotImplementedError):
             service.optimize_schedule(request)

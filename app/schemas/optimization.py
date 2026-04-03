@@ -26,7 +26,9 @@ class OptimizationSettings(BaseModel):
     )
     n_scenarios: int = Field(default=30, ge=1, description="Number of deterioration scenarios")
     random_seed: int = Field(default=123, description="Random seed for reproducibility")
-    time_limit_s: float = Field(default=10.0, gt=0, description="Solver time limit in seconds")
+    time_limit_s: float = Field(default=10.0, gt=0, description="CP-SAT solver time limit in seconds")
+    ga_epoch: int = Field(default=300, ge=1, description="GA number of generations")
+    ga_pop_size: int = Field(default=60, ge=2, description="GA population size")
 
 
 class OptimizationRequest(BaseModel):

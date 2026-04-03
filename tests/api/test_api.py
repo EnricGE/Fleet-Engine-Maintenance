@@ -51,9 +51,17 @@ class TestOptimizeScheduleEndpoint:
         assert all("month" in k for k in kpis)
 
     def test_unsupported_solver_returns_400(self, test_client, sample_payload):
-        sample_payload["settings"]["solver"] = "ga"
+        sample_payload["settings"]["solver"] = "rolling_cpsat"
         response = test_client.post("/optimize_schedule", json=sample_payload)
         assert response.status_code == 400
+
+    def test_ga_solver_returns_200(self, test_client, sample_payload):
+        sample_payload["settings"]["solver"] = "ga"
+        sample_payload["settings"]["ga_epoch"] = 10
+        sample_payload["settings"]["ga_pop_size"] = 10
+        response = test_client.post("/optimize_schedule", json=sample_payload)
+        assert response.status_code == 200
+        assert response.json()["solver"] == "ga"
 
     def test_invalid_health_returns_422(self, test_client, sample_payload):
         sample_payload["engines"][0]["health"] = 2.0

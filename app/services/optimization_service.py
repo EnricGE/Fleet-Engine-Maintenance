@@ -25,6 +25,7 @@ from fleet_engine_planning.optimization.precompute import (
     build_expected_shop_costs,
 )
 from fleet_engine_planning.solvers.cpsat_schedule import solve_cpsat_schedule_with_rentals
+from fleet_engine_planning.solvers.ga_mealpy import solve_ga_mealpy
 
 from app.db.database import get_session
 from app.db.models import OptimizationRun
@@ -41,9 +42,10 @@ class OptimizationService:
         self.repo = repo if repo is not None else RunRepository()
 
     def optimize_schedule(self, request: OptimizationRequest) -> OptimizationResult:
-        if request.settings.solver != "cpsat":
+        solver = request.settings.solver
+        if solver not in ("cpsat", "ga"):
             raise NotImplementedError(
-                f"Solver '{request.settings.solver}' is not implemented yet in OptimizationService."
+                f"Solver '{solver}' is not implemented yet in OptimizationService."
             )
 
         scenario = self._build_scenario_from_request(request)
@@ -86,12 +88,7 @@ class OptimizationService:
 
         n_required = max(0, len(scenario.fleet.engines) - scenario.spares)
 
-        logger.info(
-            "Starting CP-SAT solver — engines=%d horizon=%d scenarios=%d n_required=%d time_limit=%.1fs",
-            len(scenario.fleet.engines), T, S, n_required, request.settings.time_limit_s,
-        )
-        t0 = time.perf_counter()
-        result = solve_cpsat_schedule_with_rentals(
+        shared_solver_kwargs = dict(
             fleet=scenario.fleet,
             horizon_months=T,
             shop_capacity=scenario.shop_capacity,
@@ -102,9 +99,31 @@ class OptimizationService:
             costs=scenario.costs,
             operable=oper,
             expected_shop_cost=c_shop,
-            time_limit_s=request.settings.time_limit_s,
         )
-        logger.info("CP-SAT solver finished in %.3fs — %s", time.perf_counter() - t0,
+
+        t0 = time.perf_counter()
+        if solver == "cpsat":
+            logger.info(
+                "Starting CP-SAT solver — engines=%d horizon=%d scenarios=%d n_required=%d time_limit=%.1fs",
+                len(scenario.fleet.engines), T, S, n_required, request.settings.time_limit_s,
+            )
+            result = solve_cpsat_schedule_with_rentals(
+                **shared_solver_kwargs,
+                time_limit_s=request.settings.time_limit_s,
+            )
+        else:
+            logger.info(
+                "Starting GA solver — engines=%d horizon=%d scenarios=%d n_required=%d epoch=%d pop_size=%d",
+                len(scenario.fleet.engines), T, S, n_required,
+                request.settings.ga_epoch, request.settings.ga_pop_size,
+            )
+            result = solve_ga_mealpy(
+                **shared_solver_kwargs,
+                seed=request.settings.random_seed,
+                epoch=request.settings.ga_epoch,
+                pop_size=request.settings.ga_pop_size,
+            )
+        logger.info("%s solver finished in %.3fs — %s", solver.upper(), time.perf_counter() - t0,
                     f"objective={result.objective:.2f}" if result else "no solution")
 
         run_id = str(uuid4())
