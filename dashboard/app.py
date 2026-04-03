@@ -220,7 +220,7 @@ def page_run_optimisation() -> None:
             horizon_months = st.number_input("Horizon (months)", min_value=1, max_value=36, value=12, step=1)
             shop_capacity_str = st.text_input(
                 "Shop capacity / month (comma-separated)",
-                value="2,1,2,2,2,2,3,3,2,2,2,2",
+                value=",".join(["2"] * int(horizon_months)),
             )
             shop_duration = st.number_input("Shop duration (months)", min_value=1, max_value=6, value=2, step=1)
             spares = st.number_input("Spare engines", min_value=0, max_value=10, value=2, step=1)
