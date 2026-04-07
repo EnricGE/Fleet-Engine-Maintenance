@@ -50,10 +50,10 @@ class TestOptimizeScheduleEndpoint:
         assert len(kpis) == sample_payload["horizon_months"]
         assert all("month" in k for k in kpis)
 
-    def test_unsupported_solver_returns_400(self, test_client, sample_payload):
-        sample_payload["settings"]["solver"] = "rolling_cpsat"
+    def test_unsupported_solver_returns_422(self, test_client, sample_payload):
+        sample_payload["settings"]["solver"] = "invalid_solver"
         response = test_client.post("/optimize_schedule", json=sample_payload)
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_ga_solver_returns_200(self, test_client, sample_payload):
         sample_payload["settings"]["solver"] = "ga"

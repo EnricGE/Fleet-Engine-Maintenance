@@ -197,7 +197,12 @@ class TestGASolver:
 class TestUnsupportedSolver:
 
     def test_unsupported_solver_raises_not_implemented(self, service, sample_payload):
-        sample_payload["settings"]["solver"] = "rolling_cpsat"
-        request = OptimizationRequest(**sample_payload)
+        from app.schemas.optimization import OptimizationSettings
+        # Bypass Pydantic literal validation to test the service-level guard directly
+        settings = OptimizationSettings.model_construct(solver="bogus_solver")
+        request = OptimizationRequest.model_construct(
+            **{k: v for k, v in OptimizationRequest(**sample_payload).model_dump().items() if k != "settings"},
+            settings=settings,
+        )
         with pytest.raises(NotImplementedError):
             service.optimize_schedule(request)

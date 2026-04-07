@@ -26,6 +26,10 @@ from fleet_engine_planning.optimization.precompute import (
 )
 from fleet_engine_planning.solvers.cpsat_schedule import solve_cpsat_schedule_with_rentals
 from fleet_engine_planning.solvers.ga_mealpy import solve_ga_mealpy
+from fleet_engine_planning.controllers.rolling_horizon import (
+    run_rolling_horizon,
+    WindowSolveResult,
+)
 
 from app.db.database import get_session
 from app.db.models import OptimizationRun
@@ -43,7 +47,7 @@ class OptimizationService:
 
     def optimize_schedule(self, request: OptimizationRequest) -> OptimizationResult:
         solver = request.settings.solver
-        if solver not in ("cpsat", "ga"):
+        if solver not in ("cpsat", "ga", "rolling_cpsat"):
             raise NotImplementedError(
                 f"Solver '{solver}' is not implemented yet in OptimizationService."
             )
@@ -53,6 +57,9 @@ class OptimizationService:
         T = scenario.horizon_months
         S = request.settings.n_scenarios
         seed = request.settings.random_seed
+
+        if solver == "rolling_cpsat":
+            return self._optimize_rolling(request, scenario, T, S, seed)
 
         # Build uncertainty scenarios
         t0 = time.perf_counter()
@@ -248,3 +255,115 @@ class OptimizationService:
             )
 
         return kpis
+
+    def _optimize_rolling(
+        self,
+        request: OptimizationRequest,
+        scenario,
+        T: int,
+        S: int,
+        seed: int,
+    ) -> OptimizationResult:
+        time_limit_s = request.settings.time_limit_s
+
+        def solve_window(fleet, W_eff, cap_window, n_required, n_scenarios, scenario, oper, c_shop):
+            res = solve_cpsat_schedule_with_rentals(
+                fleet=fleet,
+                horizon_months=W_eff,
+                shop_capacity=cap_window,
+                shop_duration_months=scenario.shop_duration_months,
+                max_rentals_per_month=scenario.max_rentals_per_month,
+                n_required=n_required,
+                n_scenarios=n_scenarios,
+                costs=scenario.costs,
+                operable=oper,
+                expected_shop_cost=c_shop,
+                time_limit_s=time_limit_s,
+            )
+            if res is None:
+                raise RuntimeError("CP-SAT found no solution for rolling window")
+            return WindowSolveResult(schedule=res.schedule, rentals=res.rentals, downtime=res.downtime)
+
+        logger.info(
+            "Starting rolling CP-SAT — engines=%d horizon=%d W=%d K=%d scenarios=%d",
+            len(scenario.fleet.engines), T, scenario.window_length, scenario.commit_length, S,
+        )
+        t_start = time.perf_counter()
+
+        try:
+            plan = run_rolling_horizon(
+                scenario=scenario,
+                solve_window=solve_window,
+                H=T,
+                W=scenario.window_length,
+                K=scenario.commit_length,
+                n_scenarios=S,
+                seed=seed,
+            )
+        except RuntimeError as exc:
+            logger.warning("Rolling CP-SAT failed: %s", exc)
+            run_id = str(uuid4())
+            return OptimizationResult(
+                run_id=run_id,
+                solver="rolling_cpsat",
+                objective=float("nan"),
+                schedule={},
+                monthly_kpis=[],
+                status="no_solution",
+                solver_status="unknown",
+            )
+
+        logger.info("Rolling CP-SAT finished in %.3fs", time.perf_counter() - t_start)
+
+        objective = sum(
+            plan.maint_cost[t]
+            + (sum(plan.rentals[(t, s)] for s in range(S)) / S) * scenario.costs.rental_cost
+            + (sum(plan.downtime[(t, s)] for s in range(S)) / S) * scenario.costs.downtime_cost
+            for t in range(1, T + 1)
+        )
+
+        from fleet_engine_planning.solvers import ScheduleResult
+        result = ScheduleResult(
+            schedule=plan.first_start_month,
+            objective=objective,
+            rentals=plan.rentals,
+            downtime=plan.downtime,
+            solver_status="unknown",
+        )
+
+        monthly_kpis = self._build_monthly_kpis(
+            rentals=result.rentals,
+            downtime=result.downtime,
+            horizon_months=T,
+            n_scenarios=S,
+        )
+
+        run_id = str(uuid4())
+        with get_session() as session:
+            run = OptimizationRun(
+                run_id=run_id,
+                solver="rolling_cpsat",
+                solver_status="unknown",
+                objective=result.objective,
+                status="success",
+                horizon_months=request.horizon_months,
+                n_engines=len(request.engines),
+                max_rentals_per_month=request.max_rentals_per_month,
+                shop_duration_months=request.shop_duration_months,
+            )
+            self.repo.save_run(session, run)
+            session.flush()
+            self.repo.save_schedule(session, run_id, result.schedule)
+            self.repo.save_monthly_kpis(session, run_id, monthly_kpis)
+            session.commit()
+            logger.debug("Persisted rolling run_id=%s to database", run_id)
+
+        return OptimizationResult(
+            run_id=run_id,
+            solver="rolling_cpsat",
+            objective=result.objective,
+            schedule=result.schedule,
+            monthly_kpis=monthly_kpis,
+            status="success",
+            solver_status="unknown",
+        )

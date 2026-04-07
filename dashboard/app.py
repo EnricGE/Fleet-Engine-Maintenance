@@ -242,7 +242,7 @@ def page_run_optimisation() -> None:
             sigma = st.number_input("σ (noise)", min_value=0.0, max_value=0.05, value=0.005, step=0.001, format="%.4f")
 
         with st.expander("Solver"):
-            solver = st.selectbox("Solver", ["cpsat", "ga"])
+            solver = st.selectbox("Solver", ["cpsat", "ga", "rolling_cpsat"])
             n_scenarios = st.number_input("Monte Carlo scenarios", min_value=1, max_value=500, value=30, step=10)
             random_seed = st.number_input("Random seed", min_value=0, max_value=9999, value=42)
             if solver == "cpsat":
